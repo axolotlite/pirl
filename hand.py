@@ -4,9 +4,16 @@ import numpy as np
 import threading
 import mouse
 # import voice
+#mediapipe variables
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
+mp_holistic = mp.solutions.holistic
+#detection specific variables
+is_holistic = True
+model_complexity=1
+min_detection_confidence=0.5
+min_tracking_confidence=0.5
 
 points = []
 count = 0
@@ -28,49 +35,85 @@ def main():
 
     global points, screen_width, screen_height
     points = calibrate(cap)
-
-    with mp_hands.Hands(
-            model_complexity=0,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5) as hands:
-        while cap.isOpened():
-            success, image = cap.read()
-            if not success:
-                print("Ignoring empty camera frame.")
-                # If loading a video, use 'break' instead of 'continue'.
-                continue
-
-            # To improve performance, optionally mark the image as not writeable to
-            # pass by reference.
-            image.flags.writeable = False
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            results = hands.process(image)
-
-            # Draw the hand annotations on the image.
-            image.flags.writeable = True
-            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-            if results.multi_hand_landmarks:
-                for hand_landmarks in results.multi_hand_landmarks:
+    if(is_holistic):
+        with mp_holistic.Holistic(
+                model_complexity=model_complexity,
+                min_detection_confidence=min_detection_confidence,
+                min_tracking_confidence=min_tracking_confidence) as holistic:
+            while cap.isOpened():
+                success, image = cap.read()
+                if not success:
+                    print("Ignoring empty camera frame.")
+                    # If loading a video, use 'break' instead of 'continue'.
+                    continue
+                # To improve performance, optionally mark the image as not writeable to
+                # pass by reference.
+                image.flags.writeable = False
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                results = holistic.process(image)
+                image.flags.writeable = True
+                image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+                mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS)
+                if results.right_hand_landmarks:
+                    # mp_drawing.draw_landmarks(image, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
                     mp_drawing.draw_landmarks(
                         image,
-                        hand_landmarks,
-                        mp_hands.HAND_CONNECTIONS,
+                        results.right_hand_landmarks,
+                        mp_holistic.HAND_CONNECTIONS,
                         mp_drawing_styles.get_default_hand_landmarks_style(),
                         mp_drawing_styles.get_default_hand_connections_style())
-                    for idx, landmark in enumerate(hand_landmarks.landmark):
-                        # Tip of pointer finger only
-                        if idx != 8:
-                            continue
+
+                    landmark = results.right_hand_landmarks.landmark[8]
+                    cx, cy = landmark.x * cap_width, landmark.y * cap_height
+                    cx, cy = normalizePoint(cx, cy)
+                    if 0 <= cx < screen_width and 0 <= cy < screen_height:
+                        mouse.move((cx//smoothFactor)*smoothFactor,
+                                (cy//smoothFactor)*smoothFactor)
+                
+                cv2.imshow('MediaPipe Hands', normalizeImg(image))
+                if cv2.waitKey(5) & 0xFF == 27:
+                    break
+
+    else:
+        with mp_hands.Hands(
+                model_complexity=model_complexity,
+                min_detection_confidence=min_detection_confidence,
+                min_tracking_confidence=min_tracking_confidence) as hands:
+            while cap.isOpened():
+                success, image = cap.read()
+                if not success:
+                    print("Ignoring empty camera frame.")
+                    # If loading a video, use 'break' instead of 'continue'.
+                    continue
+
+                # To improve performance, optionally mark the image as not writeable to
+                # pass by reference.
+                image.flags.writeable = False
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                results = hands.process(image)
+
+                # Draw the hand annotations on the image.
+                image.flags.writeable = True
+                image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+                if results.multi_hand_landmarks:
+                    for hand_landmarks in results.multi_hand_landmarks:
+                        mp_drawing.draw_landmarks(
+                            image,
+                            hand_landmarks,
+                            mp_hands.HAND_CONNECTIONS,
+                            mp_drawing_styles.get_default_hand_landmarks_style(),
+                            mp_drawing_styles.get_default_hand_connections_style())
+                        landmark = hand_landmarks.landmark[8]
                         cx, cy = landmark.x * cap_width, landmark.y * cap_height
                         cx, cy = normalizePoint(cx, cy)
                         if 0 <= cx < screen_width and 0 <= cy < screen_height:
                             mouse.move((cx//smoothFactor)*smoothFactor,
-                                       (cy//smoothFactor)*smoothFactor)
-            # Flip the image horizontally for a selfie-view display.
-            # cv2.imshow('MediaPipe Hands', cv2.flip(image, 1))
-            cv2.imshow('MediaPipe Hands', normalizeImg(image))
-            if cv2.waitKey(5) & 0xFF == 27:
-                break
+                                    (cy//smoothFactor)*smoothFactor)
+                # Flip the image horizontally for a selfie-view display.
+                # cv2.imshow('MediaPipe Hands', cv2.flip(image, 1))
+                cv2.imshow('MediaPipe Hands', normalizeImg(image))
+                if cv2.waitKey(5) & 0xFF == 27:
+                    break
     cap.release()
 
 
