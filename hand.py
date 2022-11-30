@@ -10,7 +10,7 @@ mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
 mp_holistic = mp.solutions.holistic
 #detection specific variables
-is_holistic = False
+is_holistic = True
 model_complexity=1
 min_detection_confidence=0.5
 min_tracking_confidence=0.5
@@ -66,8 +66,8 @@ def main():
                     cx, cy = landmark.x * cap_width, landmark.y * cap_height
                     cx, cy = normalizePoint(cx, cy)
                     if 0 <= cx < screen_width and 0 <= cy < screen_height:
-                        mouse.move((cx//smoothFactor)*smoothFactor,
-                                (cy//smoothFactor)*smoothFactor)
+                        # mouse.move(cx,cy,duration = 0.05)
+                        cv2.circle(image, (cx, cy), 5, (187, 87, 231), 2)
                 
                 cv2.imshow('MediaPipe Hands', normalizeImg(image))
                 if cv2.waitKey(5) & 0xFF == 27:
@@ -106,8 +106,8 @@ def main():
                         cx, cy = landmark.x * cap_width, landmark.y * cap_height
                         cx, cy = normalizePoint(cx, cy)
                         if 0 <= cx < screen_width and 0 <= cy < screen_height:
-                            mouse.move((cx//smoothFactor)*smoothFactor,
-                                    (cy//smoothFactor)*smoothFactor)
+                            # mouse.move(cx,cy,duration = 0.05)
+                            cv2.circle(image, (cx, cy), 5, (187, 87, 231), 2)
                 # Flip the image horizontally for a selfie-view display.
                 # cv2.imshow('MediaPipe Hands', cv2.flip(image, 1))
                 cv2.imshow('MediaPipe Hands', normalizeImg(image))
