@@ -10,7 +10,7 @@ mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
 mp_holistic = mp.solutions.holistic
 #detection specific variables
-is_holistic = True
+is_holistic = False
 model_complexity=1
 min_detection_confidence=0.5
 min_tracking_confidence=0.5
@@ -55,7 +55,6 @@ def main():
                 image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
                 mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS)
                 if results.right_hand_landmarks:
-                    # mp_drawing.draw_landmarks(image, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
                     mp_drawing.draw_landmarks(
                         image,
                         results.right_hand_landmarks,
@@ -153,14 +152,12 @@ def side():
                         mp_hands.HAND_CONNECTIONS,
                         mp_drawing_styles.get_default_hand_landmarks_style(),
                         mp_drawing_styles.get_default_hand_connections_style())
-                    for idx, landmark in enumerate(hand_landmarks.landmark):
-                        # Tip of pointer finger only
-                        if idx != 8:
-                            continue
-                        if (right and landmark.x*cap_width >= threshold) or (not right and landmark.x*cap_width <= threshold):
-                            mouse.press()
-                        else:
-                            mouse.release()
+                    landmark = hand_landmarks.landmark[8]
+                    # Tip of pointer finger only
+                    if (right and landmark.x*cap_width >= threshold) or (not right and landmark.x*cap_width <= threshold):
+                        mouse.press()
+                    else:
+                        mouse.release()
             # Flip the image horizontally for a selfie-view display.
             # cv2.imshow('MediaPipe Hands', cv2.flip(image, 1))
             cv2.imshow('Side View', image)
