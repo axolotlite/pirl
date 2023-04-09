@@ -11,8 +11,8 @@ points = []
 count = 0
 h = None
 camIdx = 1
-screen_width = 1440
-screen_height = 900
+screen_width = 1920
+screen_height = 1080
 
 
 def main():
