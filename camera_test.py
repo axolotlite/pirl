@@ -2,15 +2,14 @@ import cv2
 import numpy as np
 import screeninfo
 from skimage.metrics import structural_similarity as ssim
-
 #code to get the screen
 def caputre_screen():
     # Get the screen size
     screen_id = 0  # Change this value to select a different screen
     screen = screeninfo.get_monitors()[screen_id]
     screen_width, screen_height = screen.width, screen.height
-    white_screen = np.zeros((screen_height, screen_width, 3), np.uint8)
-    white_screen.fill(255)
+    white_background = np.zeros((screen_height, screen_width, 3), np.uint8)
+    white_background.fill(255)
 
     # Initialize the camera device
     cap = cv2.VideoCapture(0)
@@ -23,26 +22,27 @@ def caputre_screen():
     cv2.waitKey(250)
 
     # Capture an image
-    _, img1 = cap.read()
+    _, black_screen = cap.read()
 
     # Change the color of the window
     cv2.setWindowProperty("Window", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-    cv2.imshow("Window", white_screen)
+    cv2.imshow("Window", white_background)
     cv2.waitKey(250)
 
     # Capture another image
-    _, img2 = cap.read()
+    _, white_screen = cap.read()
 
     cv2.destroyWindow("Window")
     # Release the camera device
     cap.release()
-    return(img1,img2)
+    return(black_screen,white_screen)
 def mask_screen(img1, img2):
 
     # Convert the images to grayscale
     gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
     gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
-
+    # cv2.imshow("gray1", gray1)
+    # cv2.imshow("gray2", gray2)
     # Compute the structural similarity index (SSIM) between the images
     (score, diff) = ssim(gray1, gray2, full=True)
     # Normalize the difference image to the range [0, 255]
@@ -54,7 +54,8 @@ def mask_screen(img1, img2):
     # Apply a morphological operation to close small gaps in the thresholded image
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
     morph = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
-
+    kernel = np.ones((10,25), np.uint8)
+    morph = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
     # Find contours in the morphological image
     contours, _ = cv2.findContours(morph, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -65,6 +66,23 @@ def mask_screen(img1, img2):
         if area > 100:
             cv2.drawContours(mask, [contour], 0, 255, -1)
     return(mask)
+def mask_screen2(image):
+    # Convert to grayscale and convert to 8-bit unsigned format
+    gray_screen = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    gray_screen = cv2.convertScaleAbs(gray_screen)
+    cv2.imshow('gray_screen', gray_screen)
+    cv2.waitKey(0)
+    cv2.destroyWindow("gray_screen")
+    # Perform morphological opening on the binary image
+    _, img1 = cv2.threshold(gray_screen, 220, 255, cv2.THRESH_BINARY)
+    cv2.imshow('img1', img1)
+    cv2.waitKey(0)
+    cv2.destroyWindow("img1")
+    kernel = np.ones((15,15), np.uint8)
+    opened_image = cv2.morphologyEx(img1, cv2.MORPH_OPEN, kernel)
+    return opened_image
+def mask_selector():
+    return
 # Code to find line intersections. From https://stackoverflow.com/a/20677983
 def line_intersection(line1, line2):
     xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
@@ -161,23 +179,143 @@ def method2(im1,im2):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 def Harris_Corner_Method(image, mask):
+    """
+    applies the Harris corner detection algorithm to the input mask image with:
+    a blockSize of 9
+    a ksize of 9
+    a k value of 0.05
+    The output is a grayscale image with each pixel value indicating the corner strength.
+    """
     harris_corners = cv2.cornerHarris(mask, 9, 9, 0.05)
-    print(harris_corners)
-
+    # print(harris_corners)
+    #creates a 3x3 square structuring element using the NumPy ones function.
     kernel = np.ones((3,3), np.uint8)
+    #dilates the corner points, using the kernel structuring element with 2 iterations.
+    #This is done to enhance the corner points and make them more visible.
+    #TODO test different iterations
     harris_corners = cv2.dilate(harris_corners, kernel, iterations = 2)
-
-    image[harris_corners > 0.05 * harris_corners.max()] = [255, 127, 127]
+    """
+    marks the corner points on the original image with a specific color.
+    It selects the pixels in image where the corresponding pixel is greater than 0.05 
+    times the maximum pixel value in harris_corners
+    then changes their colors in the image. This highlights the detected corner points in the image.
+    """
+    #Find all points fulfilling this condition
+    locations = np.where(harris_corners > 0.09 * harris_corners.max())
+    #invert then transpose it
+    coords = np.vstack((locations[1],locations[0])).T
+    _, centers = k_means(coords, 4)
+    #Draw the centers
+    for point in centers:
+        image = cv2.circle(image, (int(point[0]),int(point[1])), radius=0, color=(0, 220, 0), thickness=10)
     cv2.imshow('Harris Corneres', image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+import numpy as np
+
+def select_four_points(points):
+    """
+    Selects 4 points from an array of 2D points, such that the four points
+    have the highest pairwise Euclidean distance between each other and are
+    not close to each other.
+    
+    Args:
+    - points (numpy array): An array of 2D points
+    
+    Returns:
+    - selected_points (numpy array): An array of 4 selected points
+    """
+    # Compute pairwise Euclidean distances between all points
+    distances = np.sqrt(((points[:, np.newaxis] - points)**2).sum(axis=2))
+
+    # Initialize selected points array and selected point index list
+    selected_points = np.zeros((4, 2))
+    selected_indices = []
+
+    # Select the point with the highest maximum distance as the first selected point
+    max_distances = distances.max(axis=1)
+    selected_index = np.argmax(max_distances)
+    selected_points[0] = points[selected_index]
+    selected_indices.append(selected_index)
+
+    # Select the point with the highest minimum distance from the first point
+    min_distances = distances[selected_index]
+    selected_index = np.argmax(min_distances)
+    selected_points[1] = points[selected_index]
+    selected_indices.append(selected_index)
+
+    # Select the point with the highest minimum distance from the first two points
+    distances_from_selected = distances[selected_indices].min(axis=0)
+    selected_index = np.argmax(distances_from_selected)
+    selected_points[2] = points[selected_index]
+    selected_indices.append(selected_index)
+
+    # Select the point with the highest minimum distance from the first three points
+    distances_from_selected = distances[selected_indices].min(axis=0)
+    mask = (distances_from_selected > 0.1*np.mean(distances))  # Add condition to check proximity
+    filtered_indices = np.where(mask)[0]
+    selected_index = filtered_indices[np.argmax(distances_from_selected[mask])]
+    selected_points[3] = points[selected_index]
+
+    return selected_points.astype(int)
+
+def k_means(X, k, centers=None, num_iter=100):
+    if centers is None:
+        centers = select_four_points(X)
+    for _ in range(num_iter):
+        distances = np.sum(np.sqrt((X - centers[:, np.newaxis]) ** 2), axis=-1)
+        cluster_assignments = np.argmin(distances, axis=0)
+        for i in range(k):
+            msk = (cluster_assignments == i)
+            centers[i] = np.mean(X[msk], axis=0) if np.any(msk) else centers[i]
+
+    return cluster_assignments, centers
 def main():
-    im1,im2 = caputre_screen()
-    mask = mask_screen(im1,im2)
+    black_screen,white_screen = caputre_screen()
+    # cv2.imshow('white_screen', white_screen)
+    # cv2.waitKey(0)
+    # cv2.destroyWindow("white_screen")
+    # black_screen = cv2.imread("test_1.jpg", cv2.IMREAD_COLOR)
+    # white_screen = cv2.imread("test_2.jpg", cv2.IMREAD_COLOR)
+    mask = mask_screen2(white_screen)
+    # mask = mask_screen(black_screen,white_screen)
+    cv2.imshow('mask', mask)
+    cv2.waitKey(0)
+    cv2.destroyWindow("mask")
+    Harris_Corner_Method(white_screen,mask)
+    # Detect corners using the Harris corner detector
+    # harris_corners = cv2.cornerHarris(opened_image, 9, 9, 0.05)
+
+    # opened_image = 255 - opened_image
+    # Harris_Corner_Method(white_screen,opened_image)
+    # imgray = cv2.cvtColor(black_screen, cv2.COLOR_BGR2GRAY)
+
+    # _, img2 = cv2.threshold(imgray, 127, 255,0)
+
+    # cv2.imshow('img2', img2)
+    # cv2.waitKey(0)
+    # cv2.destroyWindow("img2")
+
+    # mask = cv2.inRange(hsv, lower_white, upper_white)
+    # cv2.imshow('mask', mask)
+    # cv2.waitKey(0)
+    # cv2.destroyWindow("mask")
+
+    # cv2.imshow('black_screen', black_screen)
+    # cv2.waitKey(0)
+    # cv2.destroyWindow("black_screen")
+    # cv2.imshow('white_screen', white_screen)
+    # cv2.waitKey(0)
+    # cv2.destroyWindow("white_screen")
+    # mask = mask_screen(black_screen,white_screen)
+    # cv2.imshow('mask', mask)
+    # cv2.waitKey(0)
+    # cv2.destroyWindow("mask")
+
     # method1(im1,im2)
     # method2(im1,im2)
-    Harris_Corner_Method(im2,mask)
-    Harris_Corner_Method(im1,mask)
+    # Harris_Corner_Method(im2,mask)
+    # Harris_Corner_Method(im1,mask)
 
 if __name__ == '__main__':
     main()
