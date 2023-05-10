@@ -1,7 +1,7 @@
 import sys
 import io
 
-from pynput.keyboard import Key, Listener
+# from pynput.keyboard import Key, Listener
 from PyQt5.QtCore import Qt, QThread,QRect, pyqtSignal, QBuffer, QPoint
 from PyQt5.QtWidgets import (QApplication, QLabel, QMainWindow, QVBoxLayout,
 QPushButton, QHBoxLayout, QWidget, QDesktopWidget, QFileDialog)
@@ -315,10 +315,10 @@ class MainWindow(QMainWindow):
 
             
             
-    def keyboard_pressing(self):
-        with Listener( on_press=self.on_press, on_release= None) as listener:
-            listener.join()
-        self.w.close()
+    # def keyboard_pressing(self):
+    #     with Listener( on_press=self.on_press, on_release= None) as listener:
+    #         listener.join()
+    #     self.w.close()
             
     def show_new_window(self):
         self.w.showMaximized()
