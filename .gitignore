@@ -133,3 +133,7 @@ dmypy.json
 .idea/
 
 .DS_Store
+*.mp4
+*.pdf
+
+__pycache__/*
