@@ -1,13 +1,16 @@
 import sys
 import io
-
+import subprocess
+import os
+from Autocalibrate import Autocalibration
 # from pynput.keyboard import Key, Listener
 from PyQt5.QtCore import Qt, QThread,QRect, pyqtSignal, QBuffer, QPoint
 from PyQt5.QtWidgets import (QApplication, QLabel, QMainWindow, QVBoxLayout,
 QPushButton, QHBoxLayout, QWidget, QDesktopWidget, QFileDialog)
 from PyQt5.QtGui import QPixmap, QImage, QKeyEvent, QFont, QPainter, QColor, QPen
 from fitz import *
-
+#This needs to be initialized before pyqt to ensure removal of conflicting qt5 env vars
+Autocalibrator = Autocalibration()
 
 
 class VirtualCursor(QLabel):
@@ -290,10 +293,15 @@ class MainWindow(QMainWindow):
         self.button.setFont(font)
         self.setFixedSize(800,500)
 
+        self.calibration_button = QPushButton("Calibrate")
+        self.calibration_button.setFont(font)
+        self.calibration_button.clicked.connect(self.calibrate_screen)
+
         label = QLabel("welcome to PIRL")
         label.setFont(QFont("Arial",20))
         layout.addWidget(label)
         layout.addWidget(self.button)
+        layout.addWidget(self.calibration_button)
 
         widget = QWidget()
         widget.setLayout(layout)
@@ -311,7 +319,9 @@ class MainWindow(QMainWindow):
             screen = QDesktopWidget().screenGeometry(0)
             self.w.setGeometry(QRect(screen))
             self.show_new_window()
-            
+    def calibrate_screen(self):
+        Autocalibrator.autocalibrate()
+        Autocalibrator.show_corners()
 
             
             
@@ -326,13 +336,21 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         self.w.close()
         
-        
+# print(autocalibrate())
+def main():
+    # print(qt5_vars)
+    # autocalibrator = Autocalibration()
+    # autocalibrator.autocalibrate()
+    #you have to delete qt5 variables before using qt5, i don't understand why.
 
-app = QApplication([])
+    app = QApplication([])
+    print("app")
+    window = MainWindow()
+    window.show()
+    app.exec_()
 
-window = MainWindow()
-window.show()
-
-app.exec_()
+    
+if __name__ == '__main__':
+    main()
 
 
