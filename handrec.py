@@ -7,47 +7,39 @@ import numpy as np
 import mouse
 from utils.homography import Homography
 from utils.helpers import CvFps
-from Autocalibrate import Autocalibration
+from utils.autocalibrate import Autocalibration
 from model import KeyPointClassifier
+from screeninfo import get_monitors
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
 
-Autocalibrator = Autocalibration()
-camIdx = 0
 
 class Hand(object):
     def __init__(self) -> None:
-        pass
+        self.camIdx = 0
+        self.autocalib = Autocalibration()
+        self.pmon = get_monitors()[0]
+        self.s_width, self.s_height = self.pmon.width, self.pmon.height
+
     def main_loop(self):
-        startx, starty = 0, 0
-        
-        h = Homography()
-        Autocalibrator.autocalibrate()
-        cond = Autocalibrator.show_corners()
-        if(not Autocalibrator.on_failure(cond, h.calibrate)):
-            h.points = Autocalibrator.points
-            
-        h.get_homography()
-        
-        cap = cv2.VideoCapture(camIdx)
-        cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-        cap_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        
+        self.h = Homography()
+        self.autocalib.autocalibrate()
+        cond = self.autocalib.show_corners()
+        if(not self.autocalib.on_failure(cond, self.h.calibrate)):
+            self.h.points = self.autocalib.points
+
+        self.h.get_homography()
+
+        cap = cv2.VideoCapture(self.camIdx)
+        self.cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        self.cap_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
         cv2.namedWindow('MediaPipe Hands')
-        cv2.moveWindow('MediaPipe Hands', h.s_width, 0)
+        cv2.moveWindow('MediaPipe Hands', self.s_width, 0)
 
         # FPS Measurement ########################################################
         cvFps = CvFps(buffer_len=10)
-        
-        keypoint_classifier = KeyPointClassifier()
-        # Read labels ###########################################################
-        with open('model/keypoint_classifier/keypoint_classifier_label.csv',
-                encoding='utf-8-sig') as f:
-            keypoint_classifier_labels = csv.reader(f)
-            keypoint_classifier_labels = [
-                row[0] for row in keypoint_classifier_labels
-            ]
 
         with mp_hands.Hands(
                 model_complexity=0,
@@ -62,7 +54,6 @@ class Hand(object):
                     # If loading a video, use 'break' instead of 'continue'.
                     continue
 
-                debug_image = copy.deepcopy(image)
                 # To improve performance, optionally mark the image as not writeable to
                 # pass by reference.
                 image.flags.writeable = False
@@ -73,43 +64,9 @@ class Hand(object):
                 image.flags.writeable = True
                 image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
                 if results.multi_hand_landmarks:
-                    for hand_landmarks in results.multi_hand_landmarks:
-                        mp_drawing.draw_landmarks(
-                            image,
-                            hand_landmarks,
-                            mp_hands.HAND_CONNECTIONS,
-                            mp_drawing_styles.get_default_hand_landmarks_style(),
-                            mp_drawing_styles.get_default_hand_connections_style())
-                        # Landmark calculation
-                        landmark_list = self.calc_landmark_list(
-                            debug_image, hand_landmarks)
-                        # Conversion to relative coordinates / normalized coordinates
-                        pre_processed_landmark_list = self.pre_process_landmark(
-                            landmark_list)
-                        # Hand sign classification
-                        hand_sign_id = keypoint_classifier(
-                            pre_processed_landmark_list)
-                        if hand_sign_id == 2 or hand_sign_id == 3:  # Point gesture
-                            for idx, landmark in enumerate(hand_landmarks.landmark):
-                                # Tip of pointer finger only
-                                if idx != 8:
-                                    continue
-                                cx, cy = landmark.x * cap_width, landmark.y * cap_height
-                                cx, cy = h.process_point(cx, cy)
-                                # mouse.move(cx, cy)
-                                self.wind_mouse(startx, starty, cx, cy,
-                                        move_mouse=lambda x, y: mouse.move(x, y))
-                                startx, starty = cx, cy
-                            if hand_sign_id == 3:
-                                # mouse.press()
-                                print("press")
-                            # else:
-                                # mouse.release()
-                                # print("press")
-                        else:
-                            pass
-
-                image = h.normalize_img(image)
+                    self.gesture_recognition(
+                        image, results.multi_hand_landmarks)
+                image = self.h.normalize_img(image)
                 image = cvFps.draw(image, fps)
                 cv2.imshow('MediaPipe Hands', image)
                 if cv2.waitKey(5) & 0xFF == 27:
@@ -117,6 +74,53 @@ class Hand(object):
         cv2.destroyAllWindows()
         cap.release()
 
+    def gesture_recognition(self, image, landmarks):
+        startx, starty = 0, 0
+
+        keypoint_classifier = KeyPointClassifier()
+        # Read labels ###########################################################
+        with open('model/keypoint_classifier/keypoint_classifier_label.csv',
+                  encoding='utf-8-sig') as f:
+            keypoint_classifier_labels = csv.reader(f)
+            keypoint_classifier_labels = [
+                row[0] for row in keypoint_classifier_labels
+            ]
+
+        for hand_landmarks in landmarks:
+            # Landmark calculation
+            landmark_list = self.calc_landmark_list(
+                image, hand_landmarks)
+            # Conversion to relative coordinates / normalized coordinates
+            pre_processed_landmark_list = self.pre_process_landmark(
+                landmark_list)
+            # Hand sign classification
+            hand_sign_id = keypoint_classifier(
+                pre_processed_landmark_list)
+            if hand_sign_id == 2 or hand_sign_id == 3:  # Point gesture
+                for idx, landmark in enumerate(hand_landmarks.landmark):
+                    # Tip of pointer finger only
+                    if idx != 8:
+                        continue
+                    cx, cy = landmark.x * self.cap_width, landmark.y * self.cap_height
+                    cx, cy = self.h.process_point(cx, cy)
+                    # mouse.move(cx, cy)
+                    self.wind_mouse(startx, starty, cx, cy,
+                                    move_mouse=lambda x, y: mouse.move(x, y))
+                    startx, starty = cx, cy
+                if hand_sign_id == 3:
+                    # mouse.press()
+                    print("press")
+                # else:
+                    # mouse.release()
+                    # print("press")
+            else:
+                pass
+            mp_drawing.draw_landmarks(
+                image,
+                hand_landmarks,
+                mp_hands.HAND_CONNECTIONS,
+                mp_drawing_styles.get_default_hand_landmarks_style(),
+                mp_drawing_styles.get_default_hand_connections_style())
 
     def wind_mouse(self, start_x, start_y, dest_x, dest_y, G_0=9, W_0=3, M_0=15, D_0=12, move_mouse=lambda x, y: None):
         '''
@@ -164,7 +168,6 @@ class Hand(object):
             dist = np.hypot(dest_x-start_x, dest_y-start_y)
         return current_x, current_y
 
-
     def calc_landmark_list(self, image, landmarks):
         image_width, image_height = image.shape[1], image.shape[0]
 
@@ -179,7 +182,6 @@ class Hand(object):
             landmark_point.append([landmark_x, landmark_y])
 
         return landmark_point
-
 
     def pre_process_landmark(self, landmark_list):
         temp_landmark_list = copy.deepcopy(landmark_list)
@@ -206,12 +208,14 @@ class Hand(object):
         temp_landmark_list = list(map(normalize_, temp_landmark_list))
 
         return temp_landmark_list
-    
+
+
 def main():
     hand = Hand()
     hand.main_loop()
     # Autocalibrator.autocalibrate()
     # Autocalibrator.show_corners()
-    
+
+
 if __name__ == "__main__":
     main()
