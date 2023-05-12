@@ -44,6 +44,7 @@ class Homography(object):
                 continue
 
             cv2.namedWindow('Calibration')
+            cv2.moveWindow('Calibration', int(self.s_width * 1.3), int(self.s_height * 0.3))
             cv2.setMouseCallback('Calibration', self.on_mouse)
 
             if self.count == 4:

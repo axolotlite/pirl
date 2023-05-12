@@ -33,6 +33,9 @@ class Hand(object):
         cap = cv2.VideoCapture(camIdx)
         cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         cap_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        
+        cv2.namedWindow('MediaPipe Hands')
+        cv2.moveWindow('MediaPipe Hands', h.s_width, 0)
 
         # FPS Measurement ########################################################
         cvFps = CvFps(buffer_len=10)
