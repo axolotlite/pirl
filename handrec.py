@@ -6,12 +6,13 @@ import mediapipe as mp
 import numpy as np
 import mouse
 from utils.homography import Homography
-from utils.fps import CvFpsCalc
+from utils.helpers import CvFps
 from Autocalibrate import Autocalibration
 from model import KeyPointClassifier
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
+
 Autocalibrator = Autocalibration()
 camIdx = 0
 
@@ -29,14 +30,14 @@ class Hand(object):
             h.points = Autocalibrator.points
             Autocalibrator.show_corners()
             
-        h.homography()
+        h.get_homography()
         
         cap = cv2.VideoCapture(camIdx)
         cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         cap_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
         # FPS Measurement ########################################################
-        cvFpsCalc = CvFpsCalc(buffer_len=10)
+        cvFps = CvFps(buffer_len=10)
         
         keypoint_classifier = KeyPointClassifier()
         # Read labels ###########################################################
@@ -52,7 +53,7 @@ class Hand(object):
                 min_detection_confidence=0.5,
                 min_tracking_confidence=0.5) as hands:
             while cap.isOpened():
-                fps = cvFpsCalc.get()
+                fps = cvFps.get()
 
                 success, image = cap.read()
                 if not success:
@@ -92,11 +93,8 @@ class Hand(object):
                                 # Tip of pointer finger only
                                 if idx != 8:
                                     continue
-                                cx, cy = landmark.x * cap_width, landmark.y*cap_height
-                                cx, cy = h.normalizePoint(cx, cy)
-                                cx, cy = h.dejitter(cx, cy)
-                                cx = self.constrainVal(cx, h.s_width)
-                                cy = self.constrainVal(cy, h.s_height)
+                                cx, cy = landmark.x * cap_width, landmark.y * cap_height
+                                cx, cy = h.process_point(cx, cy)
                                 # mouse.move(cx, cy)
                                 self.wind_mouse(startx, starty, cx, cy,
                                         move_mouse=lambda x, y: mouse.move(x, y))
@@ -110,18 +108,13 @@ class Hand(object):
                         else:
                             pass
 
-                image = h.normalizeImg(image)
-                image = self.draw_fps(image, fps)
+                image = h.normalize_img(image)
+                image = cvFps.draw(image, fps)
                 cv2.imshow('MediaPipe Hands', image)
                 if cv2.waitKey(5) & 0xFF == 27:
                     break
         cv2.destroyAllWindows()
         cap.release()
-    
-    def constrainVal(self, val, max, min=0):
-        val = val if val >= min else min
-        val = val if val < max else max
-        return val
 
 
     def wind_mouse(self, start_x, start_y, dest_x, dest_y, G_0=9, W_0=3, M_0=15, D_0=12, move_mouse=lambda x, y: None):
@@ -169,14 +162,6 @@ class Hand(object):
                 move_mouse(current_x, current_y)
             dist = np.hypot(dest_x-start_x, dest_y-start_y)
         return current_x, current_y
-
-
-    def draw_fps(self, image, fps):
-        cv2.putText(image, "FPS:" + str(fps), (10, 30), cv2.FONT_HERSHEY_SIMPLEX,
-                    1.0, (0, 0, 0), 4, cv2.LINE_AA)
-        cv2.putText(image, "FPS:" + str(fps), (10, 30), cv2.FONT_HERSHEY_SIMPLEX,
-                    1.0, (255, 255, 255), 2, cv2.LINE_AA)
-        return image
 
 
     def calc_landmark_list(self, image, landmarks):
