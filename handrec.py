@@ -24,7 +24,9 @@ class Hand(object):
         
         h = Homography()
         if(manual_calibration):
+            Autocalibrator.add_qt_vars()
             h.calibrate()
+            Autocalibrator.delete_qt_vars()
         else:
             Autocalibrator.autocalibrate()
             h.points = Autocalibrator.points
