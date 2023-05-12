@@ -13,6 +13,7 @@ class Autocalibration:
         self.qt5_vars = []
         self.get_vars()
         self.delete_qt_vars()
+        self.failure_condition = ord('q')
     #This is hacky code and needs to be made less dirty.
     def get_vars(self):
         for k, v in os.environ.items():
@@ -40,9 +41,14 @@ class Autocalibration:
             image = cv2.putText(image, str(idx), point, cv2.FONT_HERSHEY_SIMPLEX,1, (255, 0, 0), 2, cv2.LINE_AA)
             image = cv2.circle(image, point, radius=0, color=(0, 220, 0), thickness=10)
         cv2.imshow('Harris Corneres', image)
-        cv2.waitKey(0)
+        key = cv2.waitKey(0)
         cv2.destroyAllWindows()
-
+        return key
+    def on_failure(self, comparitor, func):
+        if(comparitor == self.failure_condition):
+            func()
+            return True
+        return False
     def capture_screen(self):
         """
         Captures a picture of a screen when it's white and another when it's black.

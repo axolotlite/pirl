@@ -19,18 +19,14 @@ camIdx = 0
 class Hand(object):
     def __init__(self) -> None:
         pass
-    def main_loop(self, manual_calibration=False):
+    def main_loop(self):
         startx, starty = 0, 0
         
         h = Homography()
-        if(manual_calibration):
-            Autocalibrator.add_qt_vars()
-            h.calibrate()
-            Autocalibrator.delete_qt_vars()
-        else:
-            Autocalibrator.autocalibrate()
+        Autocalibrator.autocalibrate()
+        cond = Autocalibrator.show_corners()
+        if(not Autocalibrator.on_failure(cond, h.calibrate)):
             h.points = Autocalibrator.points
-            Autocalibrator.show_corners()
             
         h.get_homography()
         

@@ -278,7 +278,7 @@ class MyThread(QThread):
         self.started.emit()
         self.func()
         self.finished.emit()
-        print(f"end of {self.func}")
+        print(f"end of {self.func()}")
         
 class MainWindow(QMainWindow):
     def __init__(self,):
@@ -298,16 +298,11 @@ class MainWindow(QMainWindow):
         self.calibration_button.setFont(font)
         self.calibration_button.clicked.connect(self.calibrate_screen)
 
-        self.homography_button = QPushButton("manual homography")
-        self.homography_button.setFont(font)
-        self.homography_button.clicked.connect(self.manual_homography)
-
         label = QLabel("welcome to PIRL")
         label.setFont(QFont("Arial",20))
         layout.addWidget(label)
         layout.addWidget(self.button)
         layout.addWidget(self.calibration_button)
-        layout.addWidget(self.homography_button)
 
         widget = QWidget()
         widget.setLayout(layout)
@@ -326,9 +321,7 @@ class MainWindow(QMainWindow):
             self.w.setGeometry(QRect(screen))
             self.show_new_window()
     def calibrate_screen(self):
-        hand.main_loop(False)
-    def manual_homography(self):
-        hand.main_loop(True)
+        hand.main_loop()
             
             
     # def keyboard_pressing(self):
