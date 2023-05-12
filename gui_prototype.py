@@ -216,11 +216,11 @@ class pdf_window(QMainWindow):
         
         
     def next(self):
-        print(self.pno)
         if self.pno == self.doc.__len__() - 1:
             self.pno = 0
+        else:
+            self.pno += 1
         if self.label.has_been_draw == True:
-            self.pno +=1
             self.temp_pix = self.label.pixmap()
             pix = self.get_pix_page(self.doc)
             self.label = self.making_canvas(pix)
@@ -234,19 +234,18 @@ class pdf_window(QMainWindow):
 
             self.has_been_draw == False
         else:
-            self.pno +=1
             pix = self.get_pix_page(self.edited_pdf)
             self.label = self.making_canvas(pix)
             self.layout.takeAt(0)
             self.layout.insertWidget(0, self.label)
         
     def previous(self):
-        print(self.pno)
         if self.pno == 0:
             self.pno = self.doc.__len__() - 1
+        else:
+            self.pno -= 1
         if self.label.has_been_draw == True:
             self.temp_pix = self.label.pixmap()
-            self.pno -=1
             pix = self.get_pix_page(self.edited_pdf)
             self.label = self.making_canvas(pix)
             self.layout.takeAt(0)
@@ -259,7 +258,6 @@ class pdf_window(QMainWindow):
 
             self.has_been_draw == False
         else:
-            self.pno -=1
             pix = self.get_pix_page(self.edited_pdf)
             self.label = self.making_canvas(pix)
             self.layout.takeAt(0)

@@ -13,6 +13,7 @@ class Autocalibration:
         self.points = []
         self.screen_id = 1
         self.screen = screeninfo.get_monitors()[self.screen_id]
+        self.camIdx = 0
         self.qt5_vars = []
         self.get_vars()
         self.delete_qt_vars()
@@ -49,7 +50,10 @@ class Autocalibration:
                 idx), point, cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
             image = cv2.circle(image, point, radius=0,
                                color=(0, 220, 0), thickness=10)
-        cv2.imshow('Harris Corneres', image)
+        cv2.namedWindow('Harris Corners')
+        cv2.moveWindow('Harris Corners', int(
+            self.screen.width * 1.3), int(self.screen.height * 0.3))
+        cv2.imshow('Harris Corners', image)
         key = cv2.waitKey(0)
         cv2.destroyAllWindows()
         return key
