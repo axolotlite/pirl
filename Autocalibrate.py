@@ -7,6 +7,7 @@ class Autocalibration:
     def __init__(self):
         self.black_screen = None
         self.white_screen = None
+        self.camIdx = 0
         self.points = []
         self.screen_id = 0
         self.screen = screeninfo.get_monitors()[self.screen_id]
@@ -64,7 +65,7 @@ class Autocalibration:
         background = np.zeros((screen_height, screen_width, 3), np.uint8)
 
         # Initialize the camera device
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(self.camIdx)
 
         # Create a max window on the selected screen
         cv2.namedWindow("Window", cv2.WINDOW_NORMAL)
@@ -170,9 +171,13 @@ class Autocalibration:
         locations = np.where(harris_corners > 0.09 * harris_corners.max())
         #invert then transpose it
         coords = np.vstack((locations[1],locations[0])).T
-        _, centers = self.k_means(coords, 4, self.select_four_points(coords))
-        self.delete_qt_vars()
-        return(centers)
+        if(len(coords)):
+            _, centers = self.k_means(coords, 4, self.select_four_points(coords))
+            self.delete_qt_vars()
+            return(centers)
+        else:
+            print("autocalibraion failed to find points")
+            return(np.array([[0,0],[0,0],[0,0],[0,0]]))
 
     def select_four_points(self, points):
         """
