@@ -2,7 +2,8 @@ import sys
 import io
 import subprocess
 import os
-from Autocalibrate import Autocalibration
+
+from handrec import Hand
 # from pynput.keyboard import Key, Listener
 from PyQt5.QtCore import Qt, QThread,QRect, pyqtSignal, QBuffer, QPoint
 from PyQt5.QtWidgets import (QApplication, QLabel, QMainWindow, QVBoxLayout,
@@ -10,8 +11,9 @@ QPushButton, QHBoxLayout, QWidget, QDesktopWidget, QFileDialog)
 from PyQt5.QtGui import QPixmap, QImage, QKeyEvent, QFont, QPainter, QColor, QPen
 from fitz import *
 #This needs to be initialized before pyqt to ensure removal of conflicting qt5 env vars
-Autocalibrator = Autocalibration()
 
+Homography = Homography()
+hand = Hand()
 
 class VirtualCursor(QLabel):
     def __init__(self, parent=None):
@@ -297,11 +299,16 @@ class MainWindow(QMainWindow):
         self.calibration_button.setFont(font)
         self.calibration_button.clicked.connect(self.calibrate_screen)
 
+        self.homography_button = QPushButton("manual homography")
+        self.homography_button.setFont(font)
+        self.homography_button.clicked.connect(self.manual_homography)
+
         label = QLabel("welcome to PIRL")
         label.setFont(QFont("Arial",20))
         layout.addWidget(label)
         layout.addWidget(self.button)
         layout.addWidget(self.calibration_button)
+        layout.addWidget(self.homography_button)
 
         widget = QWidget()
         widget.setLayout(layout)
@@ -322,7 +329,10 @@ class MainWindow(QMainWindow):
     def calibrate_screen(self):
         Autocalibrator.autocalibrate()
         Autocalibrator.show_corners()
-
+    def manual_homography(self):
+        Autocalibrator.add_qt_vars()
+        hand.main_loop()
+        Autocalibrator.delete_qt_vars()
             
             
     # def keyboard_pressing(self):
@@ -342,7 +352,7 @@ def main():
     # autocalibrator = Autocalibration()
     # autocalibrator.autocalibrate()
     #you have to delete qt5 variables before using qt5, i don't understand why.
-
+    # Autocalibrator.delete_qt_vars()
     app = QApplication([])
     print("app")
     window = MainWindow()

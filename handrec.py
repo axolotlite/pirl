@@ -7,19 +7,30 @@ import numpy as np
 import mouse
 from utils.homography import Homography
 from utils.fps import CvFpsCalc
+from Autocalibrate import Autocalibration
 from model import KeyPointClassifier
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
-
+Autocalibrator = Autocalibration()
 camIdx = 0
 
 class Hand(object):
     def __init__(self) -> None:
         pass
-    def main_loop(self):
+    def main_loop(self, manual_calibration=False):
         startx, starty = 0, 0
-
+        
+        h = Homography()
+        if(manual_calibration):
+            h.calibrate()
+        else:
+            Autocalibrator.autocalibrate()
+            h.points = Autocalibrator.points
+            Autocalibrator.show_corners()
+            
+        h.homography()
+        
         cap = cv2.VideoCapture(camIdx)
         cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         cap_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -27,9 +38,6 @@ class Hand(object):
         # FPS Measurement ########################################################
         cvFpsCalc = CvFpsCalc(buffer_len=10)
         
-        h = Homography()
-        h.calibrate(cap)
-
         keypoint_classifier = KeyPointClassifier()
         # Read labels ###########################################################
         with open('model/keypoint_classifier/keypoint_classifier_label.csv',
@@ -94,9 +102,11 @@ class Hand(object):
                                         move_mouse=lambda x, y: mouse.move(x, y))
                                 startx, starty = cx, cy
                             if hand_sign_id == 3:
-                                mouse.press()
-                            else:
-                                mouse.release()
+                                # mouse.press()
+                                print("press")
+                            # else:
+                                # mouse.release()
+                                # print("press")
                         else:
                             pass
 
@@ -105,6 +115,7 @@ class Hand(object):
                 cv2.imshow('MediaPipe Hands', image)
                 if cv2.waitKey(5) & 0xFF == 27:
                     break
+        cv2.destroyAllWindows()
         cap.release()
     
     def constrainVal(self, val, max, min=0):
@@ -213,6 +224,8 @@ class Hand(object):
 def main():
     hand = Hand()
     hand.main_loop()
+    # Autocalibrator.autocalibrate()
+    # Autocalibrator.show_corners()
     
 if __name__ == "__main__":
     main()
