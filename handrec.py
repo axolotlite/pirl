@@ -9,45 +9,36 @@ from utils.homography import Homography
 from utils.helpers import CvFps
 from Autocalibrate import Autocalibration
 from model import KeyPointClassifier
+from screeninfo import get_monitors
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
 
-Autocalibrator = Autocalibration()
-camIdx = 0
-
 class Hand(object):
     def __init__(self) -> None:
-        pass
-    def main_loop(self):
-        startx, starty = 0, 0
+        self.camIdx = 0
+        self.autocalib = Autocalibration()
+        self.pmon = get_monitors()[0]
+        self.s_width, self.s_height = self.pmon.width, self.pmon.height
         
-        h = Homography()
-        Autocalibrator.autocalibrate()
-        cond = Autocalibrator.show_corners()
-        if(not Autocalibrator.on_failure(cond, h.calibrate)):
-            h.points = Autocalibrator.points
+    def main_loop(self):        
+        self.h = Homography()
+        self.autocalib.autocalibrate()
+        cond = self.autocalib.show_corners()
+        if(not self.autocalib.on_failure(cond, self.h.calibrate)):
+            self.h.points = self.autocalib.points
             
-        h.get_homography()
+        self.h.get_homography()
         
-        cap = cv2.VideoCapture(camIdx)
-        cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-        cap_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        cap = cv2.VideoCapture(self.camIdx)
+        self.cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        self.cap_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
         
         cv2.namedWindow('MediaPipe Hands')
-        cv2.moveWindow('MediaPipe Hands', h.s_width, 0)
+        cv2.moveWindow('MediaPipe Hands', self.s_width, 0)
 
         # FPS Measurement ########################################################
         cvFps = CvFps(buffer_len=10)
-        
-        keypoint_classifier = KeyPointClassifier()
-        # Read labels ###########################################################
-        with open('model/keypoint_classifier/keypoint_classifier_label.csv',
-                encoding='utf-8-sig') as f:
-            keypoint_classifier_labels = csv.reader(f)
-            keypoint_classifier_labels = [
-                row[0] for row in keypoint_classifier_labels
-            ]
 
         with mp_hands.Hands(
                 model_complexity=0,
@@ -62,7 +53,6 @@ class Hand(object):
                     # If loading a video, use 'break' instead of 'continue'.
                     continue
 
-                debug_image = copy.deepcopy(image)
                 # To improve performance, optionally mark the image as not writeable to
                 # pass by reference.
                 image.flags.writeable = False
@@ -73,16 +63,32 @@ class Hand(object):
                 image.flags.writeable = True
                 image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
                 if results.multi_hand_landmarks:
-                    for hand_landmarks in results.multi_hand_landmarks:
-                        mp_drawing.draw_landmarks(
-                            image,
-                            hand_landmarks,
-                            mp_hands.HAND_CONNECTIONS,
-                            mp_drawing_styles.get_default_hand_landmarks_style(),
-                            mp_drawing_styles.get_default_hand_connections_style())
+                    self.gesture_recognition(image, results.multi_hand_landmarks)
+                image = self.h.normalize_img(image)
+                image = cvFps.draw(image, fps)
+                cv2.imshow('MediaPipe Hands', image)
+                if cv2.waitKey(5) & 0xFF == 27:
+                    break
+        cv2.destroyAllWindows()
+        cap.release()
+        
+    
+    def gesture_recognition(self, image, landmarks):
+        startx, starty = 0, 0
+        
+        keypoint_classifier = KeyPointClassifier()
+        # Read labels ###########################################################
+        with open('model/keypoint_classifier/keypoint_classifier_label.csv',
+                encoding='utf-8-sig') as f:
+            keypoint_classifier_labels = csv.reader(f)
+            keypoint_classifier_labels = [
+                row[0] for row in keypoint_classifier_labels
+            ]
+        
+        for hand_landmarks in landmarks:
                         # Landmark calculation
                         landmark_list = self.calc_landmark_list(
-                            debug_image, hand_landmarks)
+                            image, hand_landmarks)
                         # Conversion to relative coordinates / normalized coordinates
                         pre_processed_landmark_list = self.pre_process_landmark(
                             landmark_list)
@@ -94,8 +100,8 @@ class Hand(object):
                                 # Tip of pointer finger only
                                 if idx != 8:
                                     continue
-                                cx, cy = landmark.x * cap_width, landmark.y * cap_height
-                                cx, cy = h.process_point(cx, cy)
+                                cx, cy = landmark.x * self.cap_width, landmark.y * self.cap_height
+                                cx, cy = self.h.process_point(cx, cy)
                                 # mouse.move(cx, cy)
                                 self.wind_mouse(startx, starty, cx, cy,
                                         move_mouse=lambda x, y: mouse.move(x, y))
@@ -108,14 +114,12 @@ class Hand(object):
                                 # print("press")
                         else:
                             pass
-
-                image = h.normalize_img(image)
-                image = cvFps.draw(image, fps)
-                cv2.imshow('MediaPipe Hands', image)
-                if cv2.waitKey(5) & 0xFF == 27:
-                    break
-        cv2.destroyAllWindows()
-        cap.release()
+                        mp_drawing.draw_landmarks(
+                            image,
+                            hand_landmarks,
+                            mp_hands.HAND_CONNECTIONS,
+                            mp_drawing_styles.get_default_hand_landmarks_style(),
+                            mp_drawing_styles.get_default_hand_connections_style())
 
 
     def wind_mouse(self, start_x, start_y, dest_x, dest_y, G_0=9, W_0=3, M_0=15, D_0=12, move_mouse=lambda x, y: None):
