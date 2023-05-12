@@ -66,29 +66,40 @@ class Homography(object):
                 self.points = []
         cv2.destroyWindow('Calibration')
         cap.release()
-        
-        # pts_src = np.array(self.points)
-        # pts_dst = np.array([[0, 0], [0, self.s_height], [
-        #                 self.s_width, self.s_height], [self.s_width, 0]])
 
-        # # Calculate Homography
-        # self.h_matrix, _ = cv2.findHomography(pts_src, pts_dst)
-    def homography(self):
+    def get_homography(self):
+        """Calculates the homography matrix and stores it in the class variable h_matrix
+        """
         print(self.points)
         pts_src = np.array(self.points)
         pts_dst = np.array([[0, 0], [0, self.s_height], [
                         self.s_width, self.s_height], [self.s_width, 0]])
 
-        # Calculate Homography
         self.h_matrix, _ = cv2.findHomography(pts_src, pts_dst)
 
-    def normalizeImg(self, img):
-        # Warp source image to destination based on homography
+    def normalize_img(self, img):
+        """Warps source image to destination based on homography
+
+        Args:
+            img (numpy.ndarray): Source image
+
+        Returns:
+            numpy.ndarray: Image warped based on h_matrix
+        """
         return cv2.warpPerspective(
             img, self.h_matrix, (self.s_width, self.s_height))
 
 
-    def normalizePoint(self, x, y):
+    def normalize_point(self, x, y):
+        """Finds the coordinates matching the source coordinates in the warped image
+
+        Args:
+            x (int): position on x-axis in original image
+            y (int): position on y-axis in original image
+
+        Returns:
+            int, int: position on x-axis and y-axis in warped image
+        """
         pts = np.dot(self.h_matrix, np.array([x, y, 1.0]))
         pts = pts/pts[-1]
         return int(pts[0]), int(pts[1])
@@ -100,10 +111,17 @@ class Homography(object):
         x = (x // jitVarX) * jitVarX
         y = (y // jitVarY) * jitVarY
         return x, y
-
-
-def main():
-    pass
-
-if __name__ == "__main__":
-    main()
+    
+        
+    def constrain_val(self, val, max, min=0):
+        val = val if val >= min else min
+        val = val if val < max else max
+        return val
+    
+    
+    def process_point(self, x, y):
+        x, y = self.normalize_point(x, y)
+        x, y = self.dejitter(x, y)
+        x = self.constrain_val(x, self.s_width)
+        y = self.constrain_val(y, self.s_height)
+        return x, y
