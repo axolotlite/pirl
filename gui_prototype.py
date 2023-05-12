@@ -12,7 +12,6 @@ from PyQt5.QtGui import QPixmap, QImage, QKeyEvent, QFont, QPainter, QColor, QPe
 from fitz import *
 #This needs to be initialized before pyqt to ensure removal of conflicting qt5 env vars
 
-Homography = Homography()
 hand = Hand()
 
 class VirtualCursor(QLabel):
@@ -327,12 +326,9 @@ class MainWindow(QMainWindow):
             self.w.setGeometry(QRect(screen))
             self.show_new_window()
     def calibrate_screen(self):
-        Autocalibrator.autocalibrate()
-        Autocalibrator.show_corners()
+        hand.main_loop(False)
     def manual_homography(self):
-        Autocalibrator.add_qt_vars()
-        hand.main_loop()
-        Autocalibrator.delete_qt_vars()
+        hand.main_loop(True)
             
             
     # def keyboard_pressing(self):

@@ -12,6 +12,7 @@ class Autocalibration:
         self.screen = screeninfo.get_monitors()[self.screen_id]
         self.qt5_vars = []
         self.get_vars()
+        self.delete_qt_vars()
     #This is hacky code and needs to be made less dirty.
     def get_vars(self):
         for k, v in os.environ.items():
