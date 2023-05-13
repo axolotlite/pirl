@@ -148,7 +148,7 @@ class Autocalibration:
         """
         
         # Get the screen size
-
+        capture_count = 3
         screen_width, screen_height = self.screen.width, self.screen.height
         # create the background and leave it black
         background = np.zeros((screen_height, screen_width, 3), np.uint8)
@@ -165,7 +165,9 @@ class Autocalibration:
         cv2.waitKey(250)
 
         # Capture an image of the black screen
-        _, self.black_screen = cap.read()
+        for i in range(0,capture_count):
+            cv2.waitKey(10)
+            _, self.black_screen = cap.read()
 
         # Change the color of the window to white
         background.fill(255)
@@ -176,7 +178,9 @@ class Autocalibration:
         cv2.waitKey(250)
 
         # Capture another image this time of the white screen
-        _, self.white_screen = cap.read()
+        for i in range(0,capture_count):
+            cv2.waitKey(10)
+            _, self.white_screen = cap.read()
 
         cv2.destroyWindow("Window")
         # Release the camera device
@@ -391,8 +395,32 @@ class Autocalibration:
 
 def main():
     test = Autocalibration()
-    test.autocalibrate()
-    test.show_corners()
+    test.add_qt_vars()
+    test.capture_screen()
+
+    cv2.namedWindow('white screen')
+    cv2.imshow('white screen', test.white_screen)
+    cv2.waitKey()
+    cv2.namedWindow('black screen')
+    cv2.imshow('black screen', test.black_screen)
+    cv2.waitKey()
+    cv2.destroyWindow('white screen')
+    cv2.destroyWindow('black screen')
+
+    boundaries_mask = test.mask_screen_boundaries()
+    cv2.namedWindow('boundary mask')
+    cv2.imshow('boundary mask', boundaries_mask)
+    cv2.waitKey()
+    cv2.destroyWindow('boundary mask')
+
+    diff_mask = test.mask_screen_diff()
+    cv2.namedWindow('diff mask')
+    cv2.imshow('diff mask', diff_mask)
+    cv2.waitKey()
+    cv2.destroyWindow('diff mask')
+
+    # test.autocalibrate()
+    # test.show_corners()
     # test.show_captures()
     # cv2.imshow("mask",test.mask_screen_diff())
 
