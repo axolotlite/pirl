@@ -18,6 +18,9 @@ class Autocalibration:
             "manual": []
         }
         self.screen_id = 1
+        screens = screeninfo.get_monitors()
+        if( len(screens) == 1):
+            self.screen_id = 0
         self.screen = screeninfo.get_monitors()[self.screen_id]
         self.camIdx = 0
         self.qt5_vars = []
