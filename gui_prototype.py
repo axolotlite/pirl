@@ -10,10 +10,12 @@ from PyQt5.QtWidgets import (QApplication, QLabel, QMainWindow, QVBoxLayout,
                              QPushButton, QHBoxLayout, QWidget, QDesktopWidget, QFileDialog)
 from PyQt5.QtGui import QPixmap, QImage, QKeyEvent, QFont, QPainter, QColor, QPen
 from fitz import *
-# This needs to be initialized before pyqt to ensure removal of conflicting qt5 env vars
 
+from pyqt.select_window import Ui_Form
+from utils.autocalibrate import Autocalibration
+from utils.cv_wrapper import convert_image
 hand = Hand()
-
+autocalibrator = Autocalibration()
 
 class VirtualCursor(QLabel):
     def __init__(self, parent=None):
@@ -318,7 +320,7 @@ class MainWindow(QMainWindow):
             self.w = pdf_window(doc)
             screen = QDesktopWidget().screenGeometry(0)
             self.w.setGeometry(QRect(screen))
-            self.show_new_window()
+            self.show()
             self.w.showMaximized()
             self.hide()
     def create_pdf(self):
@@ -329,10 +331,30 @@ class MainWindow(QMainWindow):
         self.w = pdf_window(doc)
         screen = QDesktopWidget().screenGeometry(0)
         self.w.setGeometry(QRect(screen))
-        self.show_new_window()
+        self.show()
 
     def calibrate_screen(self):
-        hand.main_loop()
+        autocalibrator.autocalibrate()
+        image = autocalibrator.get_masked_image("diff_mask")
+        image2 = autocalibrator.get_masked_image("boundaries_mask")
+
+        self.w = QWidget()
+        ui = Ui_Form()
+        ui.setupUi(self.w)
+        def set_point(mask_type):
+            if(mask_type == "manual"):
+                autocalibrator.fallback_calibration()
+                autocalibrator.set_points(mask_type)
+            else:
+                autocalibrator.set_points(mask_type)
+            self.w.deleteLater()
+
+        ui.first_image.setPixmap(convert_image(image))
+        ui.first_image.setMouseCallback(lambda: set_point("diff_mask"))
+        ui.second_image.setPixmap(convert_image(image2))
+        ui.second_image.setMouseCallback(lambda: set_point("boundaries_mask"))
+        ui.pushButton.clicked.connect(lambda: set_point("manual"))
+        self.w.show()
 
     # def keyboard_pressing(self):
     #     with Listener( on_press=self.on_press, on_release= None) as listener:
@@ -347,10 +369,9 @@ class MainWindow(QMainWindow):
 
 def main():
     # print(qt5_vars)
-    # autocalibrator = Autocalibration()
-    # autocalibrator.autocalibrate()
     # you have to delete qt5 variables before using qt5, i don't understand why.
-    # Autocalibrator.delete_qt_vars()
+    # autocalibrator = Autocalibration()
+    autocalibrator.delete_qt_vars()
     app = QApplication([])
     window = MainWindow()
     window.show()

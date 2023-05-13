@@ -10,14 +10,20 @@ class Autocalibration:
         self.black_screen = None
         self.white_screen = None
         self.camIdx = 0
-        self.points = []
+        self.count = 0
+        self.default_points = []
+        self.points = {
+            "diff_mask": [],
+            "boundaries_mask": [],
+            "manual": []
+        }
         self.screen_id = 1
         self.screen = screeninfo.get_monitors()[self.screen_id]
         self.camIdx = 0
         self.qt5_vars = []
         self.get_vars()
-        self.delete_qt_vars()
         self.failure_condition = ord('q')
+        # self.delete_qt_vars()
     # This is hacky code and needs to be made less dirty.
 
     def get_vars(self):
@@ -31,17 +37,82 @@ class Autocalibration:
 
     def add_qt_vars(self):
         for k, var_data in self.qt5_vars:
+            # print(f"k: {k}\nvar_data{var_data}")
             os.environ[k] = var_data
+    
+    def set_points(self, mask_type):
+        print(f"default mask: {mask_type}")
+        self.default_points = self.points[mask_type]
+    def on_mouse(self, event, x, y, flags, params):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            if self.count < 4:
+                if self.count == 0:
+                    self.points["manual"].append([x, y])
+                if self.count < 3:
+                    self.points["manual"].append([x, y])
+                self.points["manual"][self.count] = [x, y]
+                self.count += 1
+        elif event == cv2.EVENT_MOUSEMOVE:
+            if self.count == 0 or self.count == 4:
+                pass
+            else:
+                self.points["manual"][self.count] = [x, y]
+    def fallback_calibration(self):
+        waitTime = 50
+        #reset points
+        self.count = 0
+        self.points["manual"] = []
 
-    def show_captures(self):
-        self.add_qt_vars()
-        cv2.imshow("Black Screen", self.black_screen)
-        cv2.waitKey()
-        cv2.imshow("White Screen", self.white_screen)
-        cv2.waitKey()
-        cv2.destroyAllWindows()
-        self.delete_qt_vars()
+        cap = cv2.VideoCapture(self.camIdx)
+        cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        cap_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
+        while (cap.isOpened()):
+
+            success, frame = cap.read()
+            if not success:
+                print("Ignoring empty camera frame.")
+                # If loading a video, use 'break' instead of 'continue'.
+                continue
+
+            cv2.namedWindow('Calibration')
+            cv2.moveWindow('Calibration', int(
+                self.screen.width * 1.3), int(self.screen.height * 0.3))
+            cv2.setMouseCallback('Calibration', self.on_mouse)
+
+            if self.count == 4:
+                break
+
+            for i in range(len(self.points["manual"])):
+                if (i + 1 == len(self.points["manual"])):
+                    cv2.line(frame, self.points["manual"][i],
+                             self.points["manual"][0], (187, 87, 231), 2)
+                else:
+                    cv2.line(
+                        frame, self.points["manual"][i], self.points["manual"][i+1], (187, 87, 231), 2)
+
+            cv2.imshow('Calibration', frame)
+
+            key = cv2.waitKey(waitTime)
+
+            if key == ord('b'):
+                break
+            elif key == ord('r'):
+                self.count = 0
+                self.points["manual"] = []
+        cv2.destroyWindow('Calibration')
+        cap.release()
+
+    def get_masked_image(self, mask_type):
+        image = self.white_screen.copy()
+        for idx, point in enumerate(self.points[mask_type]):
+            point = (int(point[0]), int(point[1]))
+            image = cv2.putText(image, str(
+                idx), point, cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+            image = cv2.circle(image, point, radius=0,
+                               color=(0, 220, 0), thickness=10)
+        return image
+    #should be removed
     def show_corners(self):
         image = self.white_screen.copy()
         for idx, point in enumerate(self.points):
@@ -71,7 +142,7 @@ class Autocalibration:
         Returns:
             black_screen,white_screen: Two pictures containing the computer screen once black and another white.
         """
-        self.add_qt_vars()
+        
         # Get the screen size
 
         screen_width, screen_height = self.screen.width, self.screen.height
@@ -106,7 +177,6 @@ class Autocalibration:
         cv2.destroyWindow("Window")
         # Release the camera device
         cap.release()
-        self.delete_qt_vars()
 
     def mask_screen_diff(self):
         """
@@ -145,7 +215,7 @@ class Autocalibration:
                 cv2.drawContours(mask, [contour], 0, 255, -1)
         return(mask)
 
-    def mask_screen_boundaries(self, image):
+    def mask_screen_boundaries(self):
         """
         Creates a mask through thresholding and opening the image.
         Args:
@@ -153,6 +223,7 @@ class Autocalibration:
         Returns:
             mask: a mask of the computer screen
         """
+        image = self.white_screen.copy()
         # Convert to grayscale
         mask = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         mask = cv2.convertScaleAbs(mask)
@@ -166,7 +237,7 @@ class Autocalibration:
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
         return mask
 
-    def Harris_Corner_Method(self, image, masks):
+    def Harris_Corner_Method(self, image, mask):
         """
         A wrapper for cv2 harris corner method that takes an image and an array of masks
         using them to return the corners of a screen
@@ -176,22 +247,7 @@ class Autocalibration:
         Returns:
             centers: array of 4 values denoting the corners of a screen
         """
-        self.add_qt_vars()
-        harris_corners = []
-        for idx, mask in enumerate(masks):
-            cv2.imshow(f"mask {idx+1}", mask)
-            harris_corners.append(cv2.cornerHarris(mask, 9, 9, 0.05))
-        #manually select the image
-        while True:
-            key = cv2.waitKey()
-            print(key)
-            if(key == 49 or key == 50 ):
-                cv2.destroyWindow("mask 1")
-                cv2.destroyWindow("mask 2")
-                break
-        harris_corners = masks[key - 49]
-        # Select the array with the lowest mean
-        # harris_corners = min(harris_corners, key=lambda arr: arr.mean())
+        harris_corners = cv2.cornerHarris(mask, 9, 9, 0.05)
         # print(harris_corners)
         # creates a 3x3 square structuring element using the NumPy ones function.
         kernel = np.ones((3, 3), np.uint8)
@@ -203,7 +259,6 @@ class Autocalibration:
         coords = np.vstack((locations[1],locations[0])).T
         if(len(coords)):
             _, centers = self.k_means(coords, 4, self.select_four_points(coords))
-            self.delete_qt_vars()
             return(centers)
         else:
             print("autocalibraion failed to find points")
@@ -312,17 +367,22 @@ class Autocalibration:
         print(ordered_points)
         print(pidxs)
         return ordered_points
-
     def autocalibrate(self):
+        self.add_qt_vars()
         self.capture_screen()
         # black_screen = cv2.imread("test_1.jpg", cv2.IMREAD_COLOR)
         # white_screen = cv2.imread("test_2.jpg", cv2.IMREAD_COLOR)
-        boundaries_mask = self.mask_screen_boundaries(self.white_screen)
+        boundaries_mask = self.mask_screen_boundaries()
         diff_mask = self.mask_screen_diff()
-        points = self.Harris_Corner_Method(self.white_screen.copy(), [
-                                           boundaries_mask, diff_mask])
+        
+        points = self.Harris_Corner_Method(self.white_screen.copy(), diff_mask)
         points = self.order_points(points)
-        self.points = points
+        self.points["diff_mask"] = points
+
+        points = self.Harris_Corner_Method(self.white_screen.copy(), boundaries_mask)
+        points = self.order_points(points)
+        self.points["boundaries_mask"] = points
+        self.delete_qt_vars()
 
 
 def main():
