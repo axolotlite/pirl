@@ -328,14 +328,16 @@ class MainWindow(QMainWindow):
             self.w.showMaximized()
             self.hide()
     def create_pdf(self):
+        print("hello world")
         doc = fitz.open()
         doc._newPage()
         doc.write()
         doc.save("tmp.pdf")
+        doc = fitz.open("tmp.pdf")
         self.w = pdf_window(doc)
         screen = QDesktopWidget().screenGeometry(0)
         self.w.setGeometry(QRect(screen))
-        self.show()
+        self.w.show()
 
     def calibrate_screen(self):
         autocalibrator.autocalibrate()
