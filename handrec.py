@@ -7,7 +7,6 @@ import numpy as np
 import mouse
 from utils.homography import Homography
 from utils.helpers import CvFps
-from utils.autocalibrate import Autocalibration
 from model import KeyPointClassifier
 from screeninfo import get_monitors
 mp_drawing = mp.solutions.drawing_utils
@@ -18,16 +17,12 @@ mp_hands = mp.solutions.hands
 class Hand(object):
     def __init__(self) -> None:
         self.camIdx = 0
-        self.autocalib = Autocalibration()
         self.pmon = get_monitors()[0]
         self.s_width, self.s_height = self.pmon.width, self.pmon.height
-
-    def main_loop(self):
         self.h = Homography()
-        self.autocalib.autocalibrate()
-        cond = self.autocalib.show_corners()
-        if(not self.autocalib.on_failure(cond, self.h.calibrate)):
-            self.h.points = self.autocalib.points
+    def set_homography_points(self, points):
+        self.h.points = points
+    def main_loop(self):
 
         self.h.get_homography()
 
@@ -213,8 +208,6 @@ class Hand(object):
 def main():
     hand = Hand()
     hand.main_loop()
-    # Autocalibrator.autocalibrate()
-    # Autocalibrator.show_corners()
 
 
 if __name__ == "__main__":

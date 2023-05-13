@@ -21,6 +21,7 @@ class Autocalibration:
         screens = screeninfo.get_monitors()
         if( len(screens) == 1):
             self.screen_id = 0
+            print("single monitor detected")
         self.screen = screeninfo.get_monitors()[self.screen_id]
         self.camIdx = 0
         self.qt5_vars = []

@@ -11,10 +11,15 @@ from PyQt5.QtWidgets import (QApplication, QLabel, QMainWindow, QVBoxLayout,
 from PyQt5.QtGui import QPixmap, QImage, QKeyEvent, QFont, QPainter, QColor, QPen
 from fitz import *
 
+from threading import Thread
+
 from pyqt.select_window import Ui_Form
 from utils.autocalibrate import Autocalibration
 from utils.cv_wrapper import convert_image
+
+
 hand = Hand()
+hand_thread = Thread( target=hand.main_loop )
 autocalibrator = Autocalibration()
 
 class VirtualCursor(QLabel):
@@ -279,7 +284,6 @@ class MyThread(QThread):
 class MainWindow(QMainWindow):
     def __init__(self,):
         super().__init__()
-
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignCenter)
 
@@ -347,6 +351,8 @@ class MainWindow(QMainWindow):
                 autocalibrator.set_points(mask_type)
             else:
                 autocalibrator.set_points(mask_type)
+            hand.set_homography_points(autocalibrator.default_points)
+            hand_thread.start()
             self.w.deleteLater()
 
         ui.first_image.setPixmap(convert_image(image))
