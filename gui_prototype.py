@@ -217,8 +217,9 @@ class pdf_window(QMainWindow):
         
     def next(self):
         print(self.pno)
-        if self.pno == self.doc.__len__() - 1:
+        if self.pno >= self.doc.__len__() - 1:
             self.pno = 0
+            return
         if self.label.has_been_draw == True:
             self.pno +=1
             self.temp_pix = self.label.pixmap()
@@ -242,8 +243,9 @@ class pdf_window(QMainWindow):
         
     def previous(self):
         print(self.pno)
-        if self.pno == 0:
+        if self.pno <= 0:
             self.pno = self.doc.__len__() - 1
+            return
         if self.label.has_been_draw == True:
             self.temp_pix = self.label.pixmap()
             self.pno -=1
@@ -298,11 +300,16 @@ class MainWindow(QMainWindow):
         self.calibration_button.setFont(font)
         self.calibration_button.clicked.connect(self.calibrate_screen)
 
+        self.new_pdf_button = QPushButton("Empty File")
+        self.new_pdf_button.setFont(font)
+        self.new_pdf_button.clicked.connect(self.create_pdf)
+
         label = QLabel("welcome to PIRL")
         label.setFont(QFont("Arial",20))
         layout.addWidget(label)
         layout.addWidget(self.button)
         layout.addWidget(self.calibration_button)
+        layout.addWidget(self.new_pdf_button)
 
         widget = QWidget()
         widget.setLayout(layout)
@@ -320,6 +327,15 @@ class MainWindow(QMainWindow):
             screen = QDesktopWidget().screenGeometry(0)
             self.w.setGeometry(QRect(screen))
             self.show_new_window()
+    def create_pdf(self):
+        doc = fitz.open()
+        doc._newPage()
+        doc.write()
+        doc.save("tmp.pdf")
+        self.w = pdf_window(doc)
+        screen = QDesktopWidget().screenGeometry(0)
+        self.w.setGeometry(QRect(screen))
+        self.show_new_window()
     def calibrate_screen(self):
         hand.main_loop()
             

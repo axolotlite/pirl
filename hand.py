@@ -39,6 +39,7 @@ def main():
         with mp_holistic.Holistic(
                 model_complexity=model_complexity,
                 min_detection_confidence=min_detection_confidence,
+                smooth_landmarks=True,
                 min_tracking_confidence=min_tracking_confidence) as holistic:
             while cap.isOpened():
                 success, image = cap.read()

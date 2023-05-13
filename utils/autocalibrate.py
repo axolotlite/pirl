@@ -174,10 +174,20 @@ class Autocalibration:
         """
         self.add_qt_vars()
         harris_corners = []
-        for mask in masks:
+        for idx, mask in enumerate(masks):
+            cv2.imshow(f"mask {idx+1}", mask)
             harris_corners.append(cv2.cornerHarris(mask, 9, 9, 0.05))
+        #manually select the image
+        while True:
+            key = cv2.waitKey()
+            print(key)
+            if(key == 49 or key == 50 ):
+                cv2.destroyWindow("mask 1")
+                cv2.destroyWindow("mask 2")
+                break
+        harris_corners = masks[key - 49]
         # Select the array with the lowest mean
-        harris_corners = min(harris_corners, key=lambda arr: arr.mean())
+        # harris_corners = min(harris_corners, key=lambda arr: arr.mean())
         # print(harris_corners)
         # creates a 3x3 square structuring element using the NumPy ones function.
         kernel = np.ones((3, 3), np.uint8)
