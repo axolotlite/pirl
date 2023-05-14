@@ -9,33 +9,33 @@ from utils.homography import Homography
 from utils.helpers import CvFps
 from model import KeyPointClassifier
 from screeninfo import get_monitors
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QThread
+from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QDesktopWidget
+from PyQt5.QtGui import QPixmap
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
+    
 
-
-class Hand(object):
-    def __init__(self) -> None:
+class HandThread(QThread):
+    change_pixmap_signal = pyqtSignal(np.ndarray)
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._run_flag = True
         self.camIdx = 0
         self.pmon = get_monitors()[0]
         self.s_width, self.s_height = self.pmon.width, self.pmon.height
+        self.startx, self.starty = 0, 0
         self.h = Homography()
 
-        self.startx, self.starty = 0, 0
-
-    def set_homography_points(self, points):
-        self.h.points = points
-
-    def main_loop(self):
-
+    def run(self):
         self.h.get_homography()
 
         cap = cv2.VideoCapture(self.camIdx)
         self.cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.cap_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-
-        cv2.namedWindow('MediaPipe Hands')
-        cv2.moveWindow('MediaPipe Hands', self.s_width, 0)
 
         # FPS Measurement ########################################################
         cvFps = CvFps(buffer_len=10)
@@ -44,7 +44,7 @@ class Hand(object):
                 model_complexity=0,
                 min_detection_confidence=0.5,
                 min_tracking_confidence=0.5) as hands:
-            while cap.isOpened():
+            while cap.isOpened() and self._run_flag:
                 fps = cvFps.get()
 
                 success, image = cap.read()
@@ -67,11 +67,18 @@ class Hand(object):
                         image, results.multi_hand_landmarks)
                 image = self.h.normalize_img(image)
                 image = cvFps.draw(image, fps)
-                cv2.imshow('MediaPipe Hands', image)
-                if cv2.waitKey(5) & 0xFF == 27:
-                    break
-        cv2.destroyAllWindows()
+                self.change_pixmap_signal.emit(image)
         cap.release()
+
+    def stop(self):
+        """Sets run flag to False and waits for thread to finish"""
+        self._run_flag = False
+        self.wait()
+        
+        
+    def set_homography_points(self, points):
+        self.h.points = points
+
 
     def gesture_recognition(self, image, landmarks):
 
@@ -206,12 +213,3 @@ class Hand(object):
         temp_landmark_list = list(map(normalize_, temp_landmark_list))
 
         return temp_landmark_list
-
-
-def main():
-    hand = Hand()
-    hand.main_loop()
-
-
-if __name__ == "__main__":
-    main()
