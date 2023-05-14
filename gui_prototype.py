@@ -64,14 +64,14 @@ class VirtualCursor(QLabel):
         self.last_y = self.y
         self.has_been_draw = True
 
-    def mouseMoveEvent(self, e):
-
-        self._position = e.pos()
+    @pyqtSlot(tuple)
+    def mouseMove(self, e):
+        self._position = QPoint(e[0], e[1])
         if self.pressed == True:
             self.has_been_draw = True
             if self.last_x is None:  # First event.
-                self.last_x = e.x()
-                self.last_y = e.y()
+                self.last_x = e[0]
+                self.last_y = e[1]
 
             painter = QPainter(self.pixmap())
             pen = QPen()
@@ -79,23 +79,55 @@ class VirtualCursor(QLabel):
             pen.setCapStyle(Qt.RoundCap)
             painter.setPen(pen)
             painter.setRenderHint(QPainter.Antialiasing)
-            painter.drawLine(self.last_x, self.last_y, e.x(), e.y())
+            painter.drawLine(self.last_x, self.last_y, e[0], e[1])
             painter.end()
             self.update()
 
-            self.last_x = e.x()
-            self.last_y = e.y()
+            self.last_x = e[0]
+            self.last_y = e[1]
         self.update()
 
-    def mousePressEvent(self, e):
-        self.pressed = True
-        # print("pressed")
+    @pyqtSlot(bool)
+    def mouseClick(self, clicked):
+        if clicked:
+            self.pressed = True
+        else:
+            self.pressed = False
+            self.last_x = None
+            self.last_y = None
 
-    def mouseReleaseEvent(self, e):
-        # print("released")
-        self.pressed = False
-        self.last_x = None
-        self.last_y = None
+    # def mouseMoveEvent(self, e):
+
+    #     self._position = e.pos()
+    #     if self.pressed == True:
+    #         self.has_been_draw = True
+    #         if self.last_x is None:  # First event.
+    #             self.last_x = e.x()
+    #             self.last_y = e.y()
+
+    #         painter = QPainter(self.pixmap())
+    #         pen = QPen()
+    #         pen.setWidth(5)
+    #         pen.setCapStyle(Qt.RoundCap)
+    #         painter.setPen(pen)
+    #         painter.setRenderHint(QPainter.Antialiasing)
+    #         painter.drawLine(self.last_x, self.last_y, e.x(), e.y())
+    #         painter.end()
+    #         self.update()
+
+    #         self.last_x = e.x()
+    #         self.last_y = e.y()
+    #     self.update()
+
+    # def mousePressEvent(self, e):
+    #     self.pressed = True
+    #     # print("pressed")
+
+    # def mouseReleaseEvent(self, e):
+    #     # print("released")
+    #     self.pressed = False
+    #     self.last_x = None
+    #     self.last_y = None
 
 
 class pdf_window(QMainWindow):
@@ -366,6 +398,8 @@ class MainWindow(QMainWindow):
             self.w = pdf_window(doc)
             screen = QDesktopWidget().screenGeometry(0)
             self.w.setGeometry(QRect(screen))
+            self.hand_window.hand_thread.coor_signal.connect(self.w.label.mouseMove)
+            self.hand_window.hand_thread.click_signal.connect(self.w.label.mouseClick)
             self.show()
             self.w.showMaximized()
             self.hide()
@@ -409,16 +443,6 @@ class MainWindow(QMainWindow):
         ui.second_image.setMouseCallback(lambda: set_point("boundaries_mask"))
         ui.pushButton.clicked.connect(lambda: set_point("manual"))
         self.w.show()
-
-    # def keyboard_pressing(self):
-    #     with Listener( on_press=self.on_press, on_release= None) as listener:
-    #         listener.join()
-    #     self.w.close()
-
-    # def closeEvent(self, event):
-    #     self.close()
-
-# print(autocalibrate())
 
 
 def main():
