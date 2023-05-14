@@ -12,9 +12,9 @@ class CalibrationScreen(QWidget):
         # setting title
         self.setWindowTitle("Autocalibration screen")
         # opening window in maximized size
-        self.setStyleSheet('background-color: white;')
+        self.setStyleSheet('background-color: black;')
         # showing all the widgets
-        self.calibration_screen = 0
+        self.calibration_screen = None
         self.screen_count = QApplication.desktop().screenCount()
         self.widgets = []
     def set_calibration_screen(self, screen_number):
@@ -52,7 +52,6 @@ class CalibrationScreen(QWidget):
         centerPoint.setY(centerPoint.y())
         qtRectangle.moveCenter(centerPoint)
         self.move(qtRectangle.topLeft())
-    from PyQt5.QtWidgets import QWidget, QPushButton, QVBoxLayout
 
 class ButtonWidget(QWidget):
     def __init__(self, func1, func2):

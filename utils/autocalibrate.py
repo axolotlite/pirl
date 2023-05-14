@@ -2,9 +2,12 @@ import cv2
 import numpy as np
 import screeninfo
 from skimage.metrics import structural_similarity as ssim
-import os
-
-
+import os,sys
+sys.path.append(os.path.abspath('pyqt'))
+from screen_calibration_widget import CalibrationScreen
+from PyQt5.QtWidgets import QApplication
+import threading
+from time import sleep
 class Autocalibration:
     def __init__(self):
         self.black_screen = None
@@ -24,25 +27,34 @@ class Autocalibration:
             print("single monitor detected")
         self.screen = screeninfo.get_monitors()[self.screen_id]
         self.camIdx = 0
-        self.qt5_vars = []
-        self.get_vars()
         self.failure_condition = ord('q')
-        # self.delete_qt_vars()
+        self.window = None
+        self.capture_thread = threading.Thread(target=self.capture_images)
     # This is hacky code and needs to be made less dirty.
-
-    def get_vars(self):
-        for k, v in os.environ.items():
-            if k.startswith("QT_") and "cv2" in v:
-                self.qt5_vars.append([k, os.environ[k]])
-
-    def delete_qt_vars(self):
-        for k, _ in self.qt5_vars:
-            del os.environ[k]
-
-    def add_qt_vars(self):
-        for k, var_data in self.qt5_vars:
-            # print(f"k: {k}\nvar_data{var_data}")
-            os.environ[k] = var_data
+    def create_widget(self):
+        App = QApplication(sys.argv)
+        # # create the instance of our Window
+        self.window = CalibrationScreen()
+        self.window.select_screen()
+        App.exec()
+    def capture_images(self):
+        sleep_duration = 1
+        while self.window == None:
+            sleep(1)
+        print("\n\nwindow opened\n\n")
+        while self.window.calibration_screen == None:
+            sleep(1)
+        print("\n\ncalibration screen opened\n\n")
+        self.black_screen = self.capture_screen()
+        sleep(sleep_duration)
+        print("\n\nchanged color\n\n")
+        self.window.set_color("white")
+        sleep(sleep_duration)
+        self.white_screen = self.capture_screen()
+        sleep(sleep_duration)
+        self.window.hide()
+        self.window.close()
+        print("\n\nExit thread\n\n")
     
     def set_points(self, mask_type):
         print(f"default mask: {mask_type}")
@@ -138,7 +150,6 @@ class Autocalibration:
             func()
             return True
         return False
-
     def capture_screen(self):
         """
         Captures a picture of a screen when it's white and another when it's black.
@@ -146,45 +157,14 @@ class Autocalibration:
         Returns:
             black_screen,white_screen: Two pictures containing the computer screen once black and another white.
         """
-        
-        # Get the screen size
         capture_count = 3
-        screen_width, screen_height = self.screen.width, self.screen.height
-        # create the background and leave it black
-        background = np.zeros((screen_height, screen_width, 3), np.uint8)
-
         # Initialize the camera device
         cap = cv2.VideoCapture(self.camIdx)
-
-        # Create a max window on the selected screen
-        cv2.namedWindow("Window", cv2.WINDOW_NORMAL)
-        cv2.imshow("Window", background)
-        cv2.moveWindow("Window", self.screen.x - 1, self.screen.y - 1)
-        cv2.setWindowProperty(
-            "Window", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-        cv2.waitKey(250)
-
-        # Capture an image of the black screen
-        for i in range(0,capture_count):
-            cv2.waitKey(10)
-            _, self.black_screen = cap.read()
-
-        # Change the color of the window to white
-        background.fill(255)
-
-        cv2.setWindowProperty(
-            "Window", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-        cv2.imshow("Window", background)
-        cv2.waitKey(250)
-
         # Capture another image this time of the white screen
-        for i in range(0,capture_count):
-            cv2.waitKey(10)
-            _, self.white_screen = cap.read()
-
-        cv2.destroyWindow("Window")
-        # Release the camera device
+        for i in range(capture_count):
+            _, image = cap.read()
         cap.release()
+        return image
 
     def mask_screen_diff(self):
         """
@@ -376,10 +356,10 @@ class Autocalibration:
         print(pidxs)
         return ordered_points
     def autocalibrate(self):
-        self.add_qt_vars()
-        self.capture_screen()
         # black_screen = cv2.imread("test_1.jpg", cv2.IMREAD_COLOR)
         # white_screen = cv2.imread("test_2.jpg", cv2.IMREAD_COLOR)
+        self.capture_thread.start()
+        self.create_widget()
         boundaries_mask = self.mask_screen_boundaries()
         diff_mask = self.mask_screen_diff()
         
@@ -390,34 +370,36 @@ class Autocalibration:
         points = self.Harris_Corner_Method(self.white_screen.copy(), boundaries_mask)
         points = self.order_points(points)
         self.points["boundaries_mask"] = points
-        self.delete_qt_vars()
-
 
 def main():
     test = Autocalibration()
-    test.add_qt_vars()
-    test.capture_screen()
+    test.autocalibrate()
+    print(test.window.calibration_screen)
+    print("Done")
+    # th = threading.Thread(target=create_widget)
+    # th.start()
+    # test.capture_screen()
 
-    cv2.namedWindow('white screen')
-    cv2.imshow('white screen', test.white_screen)
-    cv2.waitKey()
-    cv2.namedWindow('black screen')
-    cv2.imshow('black screen', test.black_screen)
-    cv2.waitKey()
-    cv2.destroyWindow('white screen')
-    cv2.destroyWindow('black screen')
+    # cv2.namedWindow('white screen')
+    # cv2.imshow('white screen', test.white_screen)
+    # cv2.waitKey()
+    # cv2.namedWindow('black screen')
+    # cv2.imshow('black screen', test.black_screen)
+    # cv2.waitKey()
+    # cv2.destroyWindow('white screen')
+    # cv2.destroyWindow('black screen')
 
-    boundaries_mask = test.mask_screen_boundaries()
-    cv2.namedWindow('boundary mask')
-    cv2.imshow('boundary mask', boundaries_mask)
-    cv2.waitKey()
-    cv2.destroyWindow('boundary mask')
+    # boundaries_mask = test.mask_screen_boundaries()
+    # cv2.namedWindow('boundary mask')
+    # cv2.imshow('boundary mask', boundaries_mask)
+    # cv2.waitKey()
+    # cv2.destroyWindow('boundary mask')
 
-    diff_mask = test.mask_screen_diff()
-    cv2.namedWindow('diff mask')
-    cv2.imshow('diff mask', diff_mask)
-    cv2.waitKey()
-    cv2.destroyWindow('diff mask')
+    # diff_mask = test.mask_screen_diff()
+    # cv2.namedWindow('diff mask')
+    # cv2.imshow('diff mask', diff_mask)
+    # cv2.waitKey()
+    # cv2.destroyWindow('diff mask')
 
     # test.autocalibrate()
     # test.show_corners()
