@@ -20,8 +20,12 @@ class Hand(object):
         self.pmon = get_monitors()[0]
         self.s_width, self.s_height = self.pmon.width, self.pmon.height
         self.h = Homography()
+
+        self.startx, self.starty = 0, 0
+
     def set_homography_points(self, points):
         self.h.points = points
+
     def main_loop(self):
 
         self.h.get_homography()
@@ -70,7 +74,6 @@ class Hand(object):
         cap.release()
 
     def gesture_recognition(self, image, landmarks):
-        startx, starty = 0, 0
 
         keypoint_classifier = KeyPointClassifier()
         # Read labels ###########################################################
@@ -91,25 +94,25 @@ class Hand(object):
             # Hand sign classification
             hand_sign_id = keypoint_classifier(
                 pre_processed_landmark_list)
-            if hand_sign_id == 2 or hand_sign_id == 3:  # Point gesture
-                for idx, landmark in enumerate(hand_landmarks.landmark):
-                    # Tip of pointer finger only
-                    if idx != 8:
-                        continue
-                    cx, cy = landmark.x * self.cap_width, landmark.y * self.cap_height
-                    cx, cy = self.h.process_point(cx, cy)
-                    # mouse.move(cx, cy)
-                    self.wind_mouse(startx, starty, cx, cy,
-                                    move_mouse=lambda x, y: mouse.move(x, y))
-                    startx, starty = cx, cy
-                if hand_sign_id == 3:
-                    # mouse.press()
-                    print("press")
-                # else:
-                    # mouse.release()
-                    # print("press")
+            # if hand_sign_id == 2 or hand_sign_id == 3:  # Point gesture
+            for idx, landmark in enumerate(hand_landmarks.landmark):
+                # Tip of pointer finger only
+                if idx != 8:
+                    continue
+                cx, cy = landmark.x * self.cap_width, landmark.y * self.cap_height
+                cx, cy = self.h.process_point(cx, cy)
+                # mouse.move(cx, cy)
+                self.wind_mouse(self.startx, self.starty, cx, cy,
+                                move_mouse=lambda x, y: mouse.move(x, y))
+                self.startx, self.starty = cx, cy
+            if hand_sign_id == 3:
+                mouse.press()
+                # print("press")
             else:
-                pass
+                mouse.release()
+                # print("press")
+            # else:
+            #     pass
             mp_drawing.draw_landmarks(
                 image,
                 hand_landmarks,
