@@ -2,10 +2,11 @@ import sys
 import io
 import subprocess
 import os
+import numpy as np
 
-from handrec import Hand
+from handrec import HandThread
 # from pynput.keyboard import Key, Listener
-from PyQt5.QtCore import Qt, QThread, QRect, pyqtSignal, QBuffer, QPoint
+from PyQt5.QtCore import Qt, QThread, QRect, pyqtSignal, pyqtSlot, QBuffer, QPoint
 from PyQt5.QtWidgets import (QApplication, QLabel, QMainWindow, QVBoxLayout,
                              QPushButton, QHBoxLayout, QWidget, QDesktopWidget, QFileDialog)
 from PyQt5.QtGui import QPixmap, QImage, QKeyEvent, QFont, QPainter, QColor, QPen
@@ -17,10 +18,6 @@ from pyqt.select_window import Ui_Form
 from utils.autocalibrate import Autocalibration
 from utils.cv_wrapper import convert_image
 
-
-hand = Hand()
-hand_thread = Thread( target=hand.main_loop )
-autocalibrator = Autocalibration()
 
 class VirtualCursor(QLabel):
     def __init__(self, parent=None):
@@ -281,9 +278,54 @@ class MyThread(QThread):
         print(f"end of {self.func()}")
 
 
+class HandWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.hand_thread = HandThread()
+        self.image = QLabel(self)
+        self.initUI()
+
+    def initUI(self):
+        self.setWindowTitle('hand_window')
+        self.resize(640, 480)  # default size
+        
+        # Set the central widget of the window to the image label
+        self.setCentralWidget(self.image)
+
+        # Set the minimum size of the window to the initial size of the label
+        self.setMinimumSize(self.image.sizeHint())
+
+    def begin(self):
+        self.hand_thread.change_pixmap_signal.connect(self.update_image)
+        self.hand_thread.start()
+
+    @pyqtSlot(np.ndarray)
+    def update_image(self, cv_img):
+        qt_img = convert_image(cv_img, self.image.size().width(), self.image.size().height())
+        self.image.setPixmap(qt_img)
+        
+    def resizeEvent(self, event):
+        # Resize the label to match the size of the window
+        self.image.resize(self.width(), self.height())
+        event.accept()
+
+    def set_homography_points(self, points):
+        self.hand_thread.set_homography_points(points)
+
+    def closeEvent(self, event):
+        # Call the hand_thread.stop() function before closing the window
+        self.hand_thread.stop()
+        event.accept()
+
+
 class MainWindow(QMainWindow):
     def __init__(self,):
         super().__init__()
+
+        self.autocalibrator = Autocalibration()
+        self.hand_window = HandWindow()
+        self.hand_window.hide()
+
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignCenter)
 
@@ -327,6 +369,7 @@ class MainWindow(QMainWindow):
             self.show()
             self.w.showMaximized()
             self.hide()
+
     def create_pdf(self):
         print("hello world")
         doc = fitz.open()
@@ -340,21 +383,24 @@ class MainWindow(QMainWindow):
         self.w.show()
 
     def calibrate_screen(self):
-        autocalibrator.autocalibrate()
-        image = autocalibrator.get_masked_image("diff_mask")
-        image2 = autocalibrator.get_masked_image("boundaries_mask")
+        self.autocalibrator.autocalibrate()
+        image = self.autocalibrator.get_masked_image("diff_mask")
+        image2 = self.autocalibrator.get_masked_image("boundaries_mask")
 
         self.w = QWidget()
         ui = Ui_Form()
         ui.setupUi(self.w)
+
         def set_point(mask_type):
             if(mask_type == "manual"):
-                autocalibrator.fallback_calibration()
-                autocalibrator.set_points(mask_type)
+                self.autocalibrator.fallback_calibration()
+                self.autocalibrator.set_points(mask_type)
             else:
-                autocalibrator.set_points(mask_type)
-            hand.set_homography_points(autocalibrator.default_points)
-            hand_thread.start()
+                self.autocalibrator.set_points(mask_type)
+            self.hand_window.set_homography_points(
+                self.autocalibrator.default_points)
+            self.hand_window.begin()
+            self.hand_window.show()
             self.w.deleteLater()
 
         ui.first_image.setPixmap(convert_image(image))
@@ -379,9 +425,10 @@ def main():
     # print(qt5_vars)
     # you have to delete qt5 variables before using qt5, i don't understand why.
     # autocalibrator = Autocalibration()
-    autocalibrator.delete_qt_vars()
+    # autocalibrator.delete_qt_vars()
     app = QApplication([])
     window = MainWindow()
+    window.autocalibrator.delete_qt_vars()
     window.show()
     app.exec_()
 
