@@ -36,10 +36,14 @@ class CalibrationScreen(QWidget):
             widget.label.setCallbackParams(screen)
             widget.show()
             self.widgets.append(widget)
+    def select_screen(self):
+        widget = ButtonWidget(lambda: self.set_calibration_screen(0),lambda: self.set_calibration_screen(1))
+        widget.show()
+        self.widgets.append(widget)
     def destroy_widgets(self):
-        for screen in range(self.screen_count):
-            self.widgets[screen].hide()
-            self.widgets[screen].deleteLater()
+        for widget in self.widgets:
+            widget.hide()
+            widget.deleteLater()
     def set_color(self, color):
         self.setStyleSheet(f'background-color: {color};')
     def center(self,screen_number):
@@ -49,13 +53,31 @@ class CalibrationScreen(QWidget):
         centerPoint.setY(centerPoint.y())
         qtRectangle.moveCenter(centerPoint)
         self.move(qtRectangle.topLeft())
+    from PyQt5.QtWidgets import QWidget, QPushButton, QVBoxLayout
+
+class ButtonWidget(QWidget):
+    def __init__(self, func1, func2):
+        super().__init__()
+        
+        # Create two buttons
+        self.button1 = QPushButton('screen 0', self)
+        self.button2 = QPushButton('screen 1', self)
+        self.button1.clicked.connect(func1)
+        self.button2.clicked.connect(func2)
+        # Create a layout for the widget and add the buttons to it
+        layout = QVBoxLayout()
+        layout.addWidget(self.button1)
+        layout.addWidget(self.button2)
+
+        # Set the layout for the widget
+        self.setLayout(layout)
 
 def main():
     # # create pyqt5 app
     App = QApplication(sys.argv)
     # # create the instance of our Window
     window = CalibrationScreen()
-    window.show_screen_number()
+    window.select_screen()
     sys.exit(App.exec())
 
 if __name__ == '__main__':
