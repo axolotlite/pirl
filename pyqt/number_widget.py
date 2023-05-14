@@ -4,7 +4,7 @@ from PyQt5.QtGui import QFont, QResizeEvent, QPainter
 from PyQt5.QtCore import Qt, QRectF, QTimer, QSize
 parent_dir = sys.path[0][:sys.path[0].rfind('/', 0, sys.path[0].rfind('/'))] + '/pirl'
 sys.path.insert(0, parent_dir)
-from pyqt.Clickable_Label import Label
+from Clickable_Label import Label
 
 class NumberWidget(QWidget):
     def __init__(self):

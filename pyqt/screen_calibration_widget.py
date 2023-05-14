@@ -3,10 +3,10 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import * 
 from PyQt5.QtCore import * 
 import sys
-parent_dir = sys.path[0][:sys.path[0].rfind('/', 0, sys.path[0].rfind('/'))] + '/pirl'
-sys.path.insert(0, parent_dir)
+# parent_dir = sys.path[0][:sys.path[0].rfind('/', 0, sys.path[0].rfind('/'))] + '/pirl'
+# sys.path.insert(0, parent_dir)
 
-from pyqt.number_widget import NumberWidget
+from number_widget import NumberWidget
   
 class CalibrationScreen(QWidget):
     def __init__(self):
