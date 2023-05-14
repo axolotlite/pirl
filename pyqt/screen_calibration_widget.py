@@ -12,17 +12,18 @@ class CalibrationScreen(QWidget):
         # setting title
         self.setWindowTitle("Autocalibration screen")
         # opening window in maximized size
-        self.showFullScreen()
         self.setStyleSheet('background-color: white;')
         # showing all the widgets
         self.calibration_screen = 0
         self.screen_count = QApplication.desktop().screenCount()
         self.widgets = []
-        self.hide()
     def set_calibration_screen(self, screen_number):
         self.calibration_screen = screen_number
         self.destroy_widgets()
         self.center(self.calibration_screen)
+        screen = QDesktopWidget().screenGeometry(screen_number)
+        self.setWindowState(Qt.WindowMaximized)
+        self.setMaximumSize(screen.size())
         self.show()
     def show_screen_number(self):
         for screen in range(self.screen_count):
