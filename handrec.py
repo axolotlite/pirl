@@ -20,6 +20,8 @@ mp_hands = mp.solutions.hands
 
 class HandThread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
+    coor_signal = pyqtSignal(tuple)
+    click_signal = pyqtSignal(bool)
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -108,18 +110,13 @@ class HandThread(QThread):
                     continue
                 cx, cy = landmark.x * self.cap_width, landmark.y * self.cap_height
                 cx, cy = self.h.process_point(cx, cy)
-                # mouse.move(cx, cy)
                 self.wind_mouse(self.startx, self.starty, cx, cy,
-                                move_mouse=lambda x, y: mouse.move(x, y))
+                                move_mouse=lambda x, y: self.coor_signal.emit((x, y)))
                 self.startx, self.starty = cx, cy
             if hand_sign_id == 3:
-                mouse.press()
-                # print("press")
+                self.click_signal.emit(True)
             else:
-                mouse.release()
-                # print("press")
-            # else:
-            #     pass
+                self.click_signal.emit(False)
             mp_drawing.draw_landmarks(
                 image,
                 hand_landmarks,
