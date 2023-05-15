@@ -2,7 +2,7 @@ import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel,QDesktopWidget
 from PyQt5.QtGui import QFont, QResizeEvent, QPainter
 from PyQt5.QtCore import Qt, QRectF, QTimer, QSize
-from Clickable_Label import Label
+from pyqt.Clickable_Label import Label
 
 class NumberWidget(QWidget):
     def __init__(self):

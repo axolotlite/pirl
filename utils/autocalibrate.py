@@ -5,9 +5,11 @@ from skimage.metrics import structural_similarity as ssim
 import os,sys
 sys.path.append(os.path.abspath('pyqt'))
 from screen_calibration_widget import CalibrationScreen
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QApplication
 import threading
 from time import sleep
+
 class Autocalibration:
     def __init__(self):
         self.black_screen = None
@@ -29,20 +31,25 @@ class Autocalibration:
         self.camIdx = 0
         self.failure_condition = ord('q')
         self.window = None
-        self.capture_thread = threading.Thread(target=self.capture_images)
+        self.autocalibration_thread = threading.Thread(target=self.autocalibrate)
     # This is hacky code and needs to be made less dirty.
     def create_widget(self):
-        App = QApplication(sys.argv)
         # # create the instance of our Window
+        print("Widget creation inbound")
         self.window = CalibrationScreen()
         self.window.select_screen()
-        App.exec()
+        print("Widget creation done")
+    def start_calibration(self):
+        self.autocalibration_thread.start()
     def capture_images(self):
+        # self.window = window
         sleep_duration = 1
         while self.window == None:
+            print("Waiting for creation of window")
             sleep(1)
         print("\n\nwindow opened\n\n")
         while self.window.calibration_screen == None:
+            print("waiting for calibration screen")
             sleep(1)
         print("\n\ncalibration screen opened\n\n")
         self.black_screen = self.capture_screen()
@@ -54,7 +61,6 @@ class Autocalibration:
         sleep(sleep_duration)
         self.window.hide()
         self.window.close()
-        print("\n\nExit thread\n\n")
     
     def set_points(self, mask_type):
         print(f"default mask: {mask_type}")
@@ -356,10 +362,9 @@ class Autocalibration:
         print(pidxs)
         return ordered_points
     def autocalibrate(self):
-        # black_screen = cv2.imread("test_1.jpg", cv2.IMREAD_COLOR)
-        # white_screen = cv2.imread("test_2.jpg", cv2.IMREAD_COLOR)
-        self.capture_thread.start()
-        self.create_widget()
+        #capture two pictures of the screen
+        self.capture_images()
+        #create masks
         boundaries_mask = self.mask_screen_boundaries()
         diff_mask = self.mask_screen_diff()
         
@@ -371,11 +376,12 @@ class Autocalibration:
         points = self.order_points(points)
         self.points["boundaries_mask"] = points
 
-def main():
-    test = Autocalibration()
-    test.autocalibrate()
-    print(test.window.calibration_screen)
-    print("Done")
+# def main():
+    # App = QApplication(sys.argv)
+    # test = Autocalibration()
+    # test.autocalibrate()
+    # print(test.window.calibration_screen)
+    # print("Done")
     # th = threading.Thread(target=create_widget)
     # th.start()
     # test.capture_screen()
@@ -407,5 +413,5 @@ def main():
     # cv2.imshow("mask",test.mask_screen_diff())
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()

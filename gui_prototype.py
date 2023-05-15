@@ -6,7 +6,7 @@ import numpy as np
 
 from handrec import HandThread
 # from pynput.keyboard import Key, Listener
-from PyQt5.QtCore import Qt, QThread, QRect, pyqtSignal, pyqtSlot, QBuffer, QPoint
+from PyQt5.QtCore import Qt, QThread, QRect, pyqtSignal, pyqtSlot, QBuffer, QPoint, QTimer
 from PyQt5.QtWidgets import (QApplication, QLabel, QMainWindow, QVBoxLayout,
                              QPushButton, QHBoxLayout, QWidget, QDesktopWidget, QFileDialog)
 from PyQt5.QtGui import QPixmap, QImage, QKeyEvent, QFont, QPainter, QColor, QPen
@@ -15,10 +15,10 @@ from fitz import *
 from threading import Thread
 
 from pyqt.select_window import Ui_Form
+from pyqt.screen_calibration_widget import CalibrationScreen
 from utils.autocalibrate import Autocalibration
 from utils.cv_wrapper import convert_image
-
-
+from time import sleep
 class VirtualCursor(QLabel):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -339,6 +339,10 @@ class MainWindow(QMainWindow):
         self.calibration_button.setFont(font)
         self.calibration_button.clicked.connect(self.calibrate_screen)
 
+        self.result_button = QPushButton("Calibration Result")
+        self.result_button.setFont(font)
+        self.result_button.clicked.connect(self.show_results)
+
         self.new_pdf_button = QPushButton("Empty File")
         self.new_pdf_button.setFont(font)
         self.new_pdf_button.clicked.connect(self.create_pdf)
@@ -348,6 +352,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(label)
         layout.addWidget(self.button)
         layout.addWidget(self.calibration_button)
+        layout.addWidget(self.result_button)
         layout.addWidget(self.new_pdf_button)
 
         widget = QWidget()
@@ -381,9 +386,11 @@ class MainWindow(QMainWindow):
         screen = QDesktopWidget().screenGeometry(0)
         self.w.setGeometry(QRect(screen))
         self.w.show()
+    def show_results(self):
+        # self.autocalibrator.black_screen = self.autocalibration_thread.images[0]
+        # self.autocalibrator.white_screen = self.autocalibration_thread.images[1]
+        # self.autocalibrator.autocalibrate()
 
-    def calibrate_screen(self):
-        self.autocalibrator.autocalibrate()
         image = self.autocalibrator.get_masked_image("diff_mask")
         image2 = self.autocalibrator.get_masked_image("boundaries_mask")
 
@@ -410,6 +417,11 @@ class MainWindow(QMainWindow):
         ui.pushButton.clicked.connect(lambda: set_point("manual"))
         self.w.show()
 
+    def calibrate_screen(self):
+        self.autocalibrator.create_widget()
+        QTimer.singleShot(500, self.autocalibrator.start_calibration)
+        
+
     # def keyboard_pressing(self):
     #     with Listener( on_press=self.on_press, on_release= None) as listener:
     #         listener.join()
@@ -425,10 +437,8 @@ def main():
     # print(qt5_vars)
     # you have to delete qt5 variables before using qt5, i don't understand why.
     # autocalibrator = Autocalibration()
-    # autocalibrator.delete_qt_vars()
     app = QApplication([])
     window = MainWindow()
-    window.autocalibrator.delete_qt_vars()
     window.show()
     app.exec_()
 
