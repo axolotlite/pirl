@@ -4,7 +4,7 @@ import screeninfo
 from skimage.metrics import structural_similarity as ssim
 import os,sys
 sys.path.append(os.path.abspath('pyqt'))
-from screen_calibration_widget import CalibrationScreen
+from screen_calibration_widget import CalibrationScreen, ManualScreen
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QApplication
 import threading
@@ -80,50 +80,9 @@ class Autocalibration:
             else:
                 self.points["manual"][self.count] = [x, y]
     def fallback_calibration(self):
-        waitTime = 50
-        #reset points
-        self.count = 0
-        self.points["manual"] = []
-
-        cap = cv2.VideoCapture(self.camIdx)
-        cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-        cap_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-
-        while (cap.isOpened()):
-
-            success, frame = cap.read()
-            if not success:
-                print("Ignoring empty camera frame.")
-                # If loading a video, use 'break' instead of 'continue'.
-                continue
-
-            cv2.namedWindow('Calibration')
-            cv2.moveWindow('Calibration', int(
-                self.screen.width * 1.3), int(self.screen.height * 0.3))
-            cv2.setMouseCallback('Calibration', self.on_mouse)
-
-            if self.count == 4:
-                break
-
-            for i in range(len(self.points["manual"])):
-                if (i + 1 == len(self.points["manual"])):
-                    cv2.line(frame, self.points["manual"][i],
-                             self.points["manual"][0], (187, 87, 231), 2)
-                else:
-                    cv2.line(
-                        frame, self.points["manual"][i], self.points["manual"][i+1], (187, 87, 231), 2)
-
-            cv2.imshow('Calibration', frame)
-
-            key = cv2.waitKey(waitTime)
-
-            if key == ord('b'):
-                break
-            elif key == ord('r'):
-                self.count = 0
-                self.points["manual"] = []
-        cv2.destroyWindow('Calibration')
-        cap.release()
+        self.window = ManualScreen(self.camIdx, self.screen)
+        self.points["manual"] = self.window.points["manual"]
+        self.window.close()
 
     def get_masked_image(self, mask_type):
         image = self.white_screen.copy()
