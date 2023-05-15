@@ -96,39 +96,6 @@ class VirtualCursor(QLabel):
             self.last_x = None
             self.last_y = None
 
-    # def mouseMoveEvent(self, e):
-
-    #     self._position = e.pos()
-    #     if self.pressed == True:
-    #         self.has_been_draw = True
-    #         if self.last_x is None:  # First event.
-    #             self.last_x = e.x()
-    #             self.last_y = e.y()
-
-    #         painter = QPainter(self.pixmap())
-    #         pen = QPen()
-    #         pen.setWidth(5)
-    #         pen.setCapStyle(Qt.RoundCap)
-    #         painter.setPen(pen)
-    #         painter.setRenderHint(QPainter.Antialiasing)
-    #         painter.drawLine(self.last_x, self.last_y, e.x(), e.y())
-    #         painter.end()
-    #         self.update()
-
-    #         self.last_x = e.x()
-    #         self.last_y = e.y()
-    #     self.update()
-
-    # def mousePressEvent(self, e):
-    #     self.pressed = True
-    #     # print("pressed")
-
-    # def mouseReleaseEvent(self, e):
-    #     # print("released")
-    #     self.pressed = False
-    #     self.last_x = None
-    #     self.last_y = None
-
 
 class pdf_window(QMainWindow):
     def __init__(self, document):
