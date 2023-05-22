@@ -3,7 +3,7 @@ import io
 import subprocess
 import os
 import numpy as np
-
+import inspect
 from handrec import HandThread
 # from pynput.keyboard import Key, Listener
 from PyQt5.QtCore import Qt, QThread, QRect, pyqtSignal, pyqtSlot, QBuffer, QPoint, QTimer
@@ -22,9 +22,10 @@ from time import sleep
 class VirtualCursor(QLabel):
     def __init__(self, parent=None):
         super().__init__(parent)
+
         self.pressed = False
-        self.x = 20
-        self.y = 20
+        self.x = 0
+        self.y = 0
         self.has_been_draw = False
         self.setMouseTracking(True)
         self.setCursor(Qt.BlankCursor)
@@ -32,10 +33,15 @@ class VirtualCursor(QLabel):
         self._opacity = 0.4
         self.last_x = None
         self.last_y = None
+        self.global_x = self.mapToGlobal(QPoint(0,0)).x()
+        
 
     def resizeEvent(self, event):
         # When the window is resized, resize the pixmap to the new window size
-
+        # print(f" resize label {self.mapToGlobal(QPoint(0,0))}")
+        self.global_x = self.mapToGlobal(QPoint(0,0)).x()
+        self.global_parent_x = self.parent().mapToGlobal(QPoint(0,0)).x()  
+        self.diff_x = self.global_x - self.global_parent_x  
         pixmap = self.pixmap().scaled(self.size(), aspectRatioMode=Qt.KeepAspectRatio)
         self.setPixmap(pixmap)
 
@@ -44,33 +50,22 @@ class VirtualCursor(QLabel):
         super().paintEvent(event)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-
         painter.setBrush(QColor(255, 255, 0, int(self._opacity * 255)))
         painter.drawEllipse(self._position, 5, 5)
         painter.end()
-
-    def drawEvent(self):
-        print("hello")
-        painter = QPainter(self.pixmap())
-
-        pen = QPen()
-        pen.setColor(QColor("red"))
-        pen.setWidth(1)
-        painter.setPen(pen)
-        painter.drawLine(self.last_x, self.last_y, self.x, self.y)
-        painter.end()
-
-        self.last_x = self.x
-        self.last_y = self.y
-        self.has_been_draw = True
+        
+        
 
     @pyqtSlot(tuple)
     def mouseMove(self, e):
-        self._position = QPoint(e[0], e[1])
+        self._position = QPoint(e[0] - self.diff_x , e[1])
+        # print(f"in move {self._position}")
+        # print(self.mapToGlobal(self._position))
+        # print(self.mapFromGlobal(self.mapToGlobal(self._position)))
         if self.pressed == True:
             self.has_been_draw = True
             if self.last_x is None:  # First event.
-                self.last_x = e[0]
+                self.last_x = e[0] - self.diff_x
                 self.last_y = e[1]
 
             painter = QPainter(self.pixmap())
@@ -79,11 +74,11 @@ class VirtualCursor(QLabel):
             pen.setCapStyle(Qt.RoundCap)
             painter.setPen(pen)
             painter.setRenderHint(QPainter.Antialiasing)
-            painter.drawLine(self.last_x, self.last_y, e[0], e[1])
+            painter.drawLine(self.last_x, self.last_y, e[0] - self.diff_x, e[1])
             painter.end()
             self.update()
 
-            self.last_x = e[0]
+            self.last_x = e[0] - self.diff_x
             self.last_y = e[1]
         self.update()
 
@@ -131,6 +126,10 @@ class pdf_window(QMainWindow):
         widget = QWidget()
         widget.setLayout(self.layout)
         self.setCentralWidget(widget)
+        
+    def set_hand_thread(self,hand_thread):
+        print("let's gooo")
+        self.hand_thread = hand_thread
 
     def blank_page(self):
         self.canvas = QPixmap(self.label.width(), self.label.height())
@@ -157,10 +156,11 @@ class pdf_window(QMainWindow):
         label.setPixmap(self.pixmap)
         return label
 
-    # def resizeEvent(self, event):
-    #     # When the window is resized, resize the pixmap to the new window size
-    #     self.pixmap = self.pixmap.scaled(self.size(), aspectRatioMode=Qt.KeepAspectRatio)
-    #     self.label.setPixmap(self.pixmap)
+    def resizeEvent(self, event):
+        # When the window is resized, resize the pixmap to the new window size
+        # print(F"resize pdf {self.mapToGlobal(QPoint(0,0))}")
+        self.pixmap = self.pixmap.scaled(self.size(), aspectRatioMode=Qt.KeepAspectRatio)
+        self.label.setPixmap(self.pixmap)
 
     def write_next(self):
 
@@ -221,6 +221,8 @@ class pdf_window(QMainWindow):
             self.temp_pix = self.label.pixmap()
             pix = self.get_pix_page(self.doc)
             self.label = self.making_canvas(pix)
+            self.hand_thread.coor_signal.connect(self.label.mouseMove)
+            self.hand_thread.click_signal.connect(self.label.mouseClick)
             self.layout.takeAt(0)
             self.layout.insertWidget(0, self.label)
 
@@ -233,6 +235,8 @@ class pdf_window(QMainWindow):
         else:
             pix = self.get_pix_page(self.edited_pdf)
             self.label = self.making_canvas(pix)
+            self.hand_thread.coor_signal.connect(self.label.mouseMove)
+            self.hand_thread.click_signal.connect(self.label.mouseClick)
             self.layout.takeAt(0)
             self.layout.insertWidget(0, self.label)
 
@@ -245,6 +249,8 @@ class pdf_window(QMainWindow):
             self.temp_pix = self.label.pixmap()
             pix = self.get_pix_page(self.edited_pdf)
             self.label = self.making_canvas(pix)
+            self.hand_thread.coor_signal.connect(self.label.mouseMove)
+            self.hand_thread.click_signal.connect(self.label.mouseClick)
             self.layout.takeAt(0)
             self.layout.insertWidget(0, self.label)
 
@@ -257,6 +263,8 @@ class pdf_window(QMainWindow):
         else:
             pix = self.get_pix_page(self.edited_pdf)
             self.label = self.making_canvas(pix)
+            self.hand_thread.coor_signal.connect(self.label.mouseMove)
+            self.hand_thread.click_signal.connect(self.label.mouseClick)
             self.layout.takeAt(0)
             self.layout.insertWidget(0, self.label)
 
@@ -368,8 +376,10 @@ class MainWindow(QMainWindow):
             print(f"Selected file: {file_name}")
             doc = fitz.open(file_name)
             self.w = pdf_window(doc)
-            screen = QDesktopWidget().screenGeometry(0)
+            self.w.set_hand_thread(self.hand_window.hand_thread)
+            screen = QDesktopWidget().screenGeometry(1)
             self.w.setGeometry(QRect(screen))
+            # here you pass just the first mouse move of the first page when we need to pass the mouseMove the page we are in since we always do another cursor when new page
             self.hand_window.hand_thread.coor_signal.connect(self.w.label.mouseMove)
             self.hand_window.hand_thread.click_signal.connect(self.w.label.mouseClick)
             self.show()
