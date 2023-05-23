@@ -15,8 +15,9 @@ from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QDesktop
 from PyQt5.QtGui import QPixmap
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
-mp_hands = mp.solutions.hands
-    
+# mp_hands = mp.solutions.hands #changing to holistic
+mp_holistic = mp.solutions.holistic
+selected_hand = "right"
 
 class HandThread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
@@ -42,10 +43,15 @@ class HandThread(QThread):
         # FPS Measurement ########################################################
         cvFps = CvFps(buffer_len=10)
 
-        with mp_hands.Hands(
-                model_complexity=0,
+        with mp_holistic.Holistic(
                 min_detection_confidence=0.5,
-                min_tracking_confidence=0.5) as hands:
+                min_tracking_confidence=0.5,
+                static_image_mode=False,
+                model_complexity=0,
+                smooth_landmarks=True,
+                enable_segmentation=True,
+                smooth_segmentation=True,
+                refine_face_landmarks=False) as holistic:
             while cap.isOpened() and self._run_flag:
                 fps = cvFps.get()
 
@@ -59,14 +65,19 @@ class HandThread(QThread):
                 # pass by reference.
                 image.flags.writeable = False
                 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                results = hands.process(image)
-
+                results = holistic.process(image)
                 # Draw the hand annotations on the image.
                 image.flags.writeable = True
                 image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                if results.multi_hand_landmarks:
+                
+                # if selected_hand == "right":
+                hand_result = results.right_hand_landmarks
+                # print(results.right_hand_landmarks.landmark)
+                # elif selected_hand == "left":
+                    # hand_result = results.left_hand_landmarks
+                if hand_result:
                     self.gesture_recognition(
-                        image, results.multi_hand_landmarks)
+                        image, hand_result)
                 image = self.h.normalize_img(image)
                 image = cvFps.draw(image, fps)
                 self.change_pixmap_signal.emit(image)
@@ -92,37 +103,38 @@ class HandThread(QThread):
             keypoint_classifier_labels = [
                 row[0] for row in keypoint_classifier_labels
             ]
+        hand_landmarks = landmarks
 
-        for hand_landmarks in landmarks:
-            # Landmark calculation
-            landmark_list = self.calc_landmark_list(
-                image, hand_landmarks)
-            # Conversion to relative coordinates / normalized coordinates
-            pre_processed_landmark_list = self.pre_process_landmark(
-                landmark_list)
-            # Hand sign classification
-            hand_sign_id = keypoint_classifier(
-                pre_processed_landmark_list)
-            # if hand_sign_id == 2 or hand_sign_id == 3:  # Point gesture
-            for idx, landmark in enumerate(hand_landmarks.landmark):
-                # Tip of pointer finger only
-                if idx != 8:
-                    continue
-                cx, cy = landmark.x * self.cap_width, landmark.y * self.cap_height
-                cx, cy = self.h.process_point(cx, cy)
-                self.wind_mouse(self.startx, self.starty, cx, cy,
-                                move_mouse=lambda x, y: self.coor_signal.emit((x, y)))
-                self.startx, self.starty = cx, cy
-            if hand_sign_id == 3:
-                self.click_signal.emit(True)
-            else:
-                self.click_signal.emit(False)
-            mp_drawing.draw_landmarks(
-                image,
-                hand_landmarks,
-                mp_hands.HAND_CONNECTIONS,
-                mp_drawing_styles.get_default_hand_landmarks_style(),
-                mp_drawing_styles.get_default_hand_connections_style())
+        # for hand_landmarks in landmarks:
+        # Landmark calculation
+        landmark_list = self.calc_landmark_list(
+            image, hand_landmarks)
+        # Conversion to relative coordinates / normalized coordinates
+        pre_processed_landmark_list = self.pre_process_landmark(
+            landmark_list)
+        # Hand sign classification
+        hand_sign_id = keypoint_classifier(
+            pre_processed_landmark_list)
+        # if hand_sign_id == 2 or hand_sign_id == 3:  # Point gesture
+        for idx, landmark in enumerate(hand_landmarks.landmark):
+            # Tip of pointer finger only
+            if idx != 8:
+                continue
+            cx, cy = landmark.x * self.cap_width, landmark.y * self.cap_height
+            cx, cy = self.h.process_point(cx, cy)
+            self.wind_mouse(self.startx, self.starty, cx, cy,
+                            move_mouse=lambda x, y: self.coor_signal.emit((x, y)))
+            self.startx, self.starty = cx, cy
+        if hand_sign_id == 3:
+            self.click_signal.emit(True)
+        else:
+            self.click_signal.emit(False)
+        mp_drawing.draw_landmarks(
+            image,
+            hand_landmarks,
+            mp_holistic.HAND_CONNECTIONS,
+            mp_drawing_styles.get_default_hand_landmarks_style(),
+            mp_drawing_styles.get_default_hand_connections_style())
 
     def wind_mouse(self, start_x, start_y, dest_x, dest_y, G_0=9, W_0=3, M_0=15, D_0=12, move_mouse=lambda x, y: None):
         '''
@@ -174,7 +186,6 @@ class HandThread(QThread):
         image_width, image_height = image.shape[1], image.shape[0]
 
         landmark_point = []
-
         # Keypoint
         for _, landmark in enumerate(landmarks.landmark):
             landmark_x = min(int(landmark.x * image_width), image_width - 1)

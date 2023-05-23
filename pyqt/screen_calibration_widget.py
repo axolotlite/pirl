@@ -82,8 +82,11 @@ class ManualScreen(QMainWindow):
         self.breakflag = False
 
         self.cap = cv2.VideoCapture(self.camIdx)
-        self.cap_width = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-        self.cap_height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")) # add this line
+        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        self.cap_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.cap_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
         self.label = QLabel(self)
         self.label.setFixedSize(self.cap_width, self.cap_height)
