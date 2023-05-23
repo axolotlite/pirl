@@ -17,7 +17,7 @@ mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 # mp_hands = mp.solutions.hands #changing to holistic
 mp_holistic = mp.solutions.holistic
-selected_hand = "right"
+
 
 class HandThread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
@@ -32,6 +32,7 @@ class HandThread(QThread):
         self.s_width, self.s_height = self.pmon.width, self.pmon.height
         self.startx, self.starty = 0, 0
         self.h = Homography()
+        self.selected_hand = "right"
 
     def run(self):
         self.h.get_homography()
@@ -70,11 +71,11 @@ class HandThread(QThread):
                 image.flags.writeable = True
                 image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
                 
-                # if selected_hand == "right":
-                hand_result = results.right_hand_landmarks
-                # print(results.right_hand_landmarks.landmark)
-                # elif selected_hand == "left":
-                    # hand_result = results.left_hand_landmarks
+                    
+                if self.selected_hand == "right":
+                    hand_result = results.right_hand_landmarks
+                elif self.selected_hand == "left":
+                    hand_result = results.left_hand_landmarks
                 if hand_result:
                     self.gesture_recognition(
                         image, hand_result)
