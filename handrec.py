@@ -18,31 +18,31 @@ mp_drawing_styles = mp.solutions.drawing_styles
 # mp_hands = mp.solutions.hands #changing to holistic
 mp_holistic = mp.solutions.holistic
 
+from cfg import CFG
 
 class HandThread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
     coor_signal = pyqtSignal(tuple)
     click_signal = pyqtSignal(bool)
     
-    def __init__(self,CFG, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.CFG = CFG
         self._run_flag = True
         self.camIdx = CFG.camIdx
-        self.pmon = CFG.pmons[CFG.handThreadScreen]
+        self.pmon = CFG.monitors[CFG.handThreadScreen]
         self.s_width, self.s_height = self.pmon.width, self.pmon.height
         self.startx, self.starty = 0, 0
-        self.h = Homography(CFG=CFG)
+        self.h = Homography()
         self.selected_hand = "right"
 
     def run(self):
         self.h.get_homography()
 
         cap = cv2.VideoCapture(self.camIdx)
-        if(self.CFG.MJPG):
+        if(CFG.MJPG):
             cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")) # add this line
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.CFG.width)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.CFG.height)
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, CFG.width)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CFG.height)
         self.cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.cap_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 

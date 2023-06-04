@@ -3,6 +3,7 @@ from pyqt.number_widget import NumberWidget
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
+from cfg import CFG
 import numpy as np
 from time import sleep
 import cv2
@@ -73,11 +74,10 @@ class CalibrationScreen(QWidget):
 
 
 class ManualScreen(QMainWindow):
-    def __init__(self, CFG):
+    def __init__(self):
         super().__init__()
-        self.CFG = CFG
         self.camIdx = CFG.camIdx
-        self.screen = CFG.pmons[CFG.mainScreen]
+        self.screen = CFG.monitors[CFG.mainScreen]
         self.count = 0
         self.points = {"manual": []}
         self.breakflag = False
@@ -85,8 +85,8 @@ class ManualScreen(QMainWindow):
         self.cap = cv2.VideoCapture(self.camIdx)
         if(CFG.MJPG):
             self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")) # add this line
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.CFG.width)
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.CFG.height)
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, CFG.width)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CFG.height)
         self.cap_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.cap_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
