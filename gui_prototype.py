@@ -21,10 +21,6 @@ from utils.autocalibrate import Autocalibration
 from utils.cv_wrapper import convert_image
 from time import sleep
 
-from cfg import CFG
-
-configs = CFG(camIdx=0,mainScreen=0)
-
 class VirtualCursor(QLabel):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -317,7 +313,7 @@ class MyThread(QThread):
 class HandWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.hand_thread = HandThread(CFG=configs)
+        self.hand_thread = HandThread()
         self.image = QLabel(self)
         self.initUI()
 
@@ -358,7 +354,7 @@ class MainWindow(QMainWindow):
     def __init__(self,):
         super().__init__()
 
-        self.autocalibrator = Autocalibration(CFG=configs)
+        self.autocalibrator = Autocalibration()
         self.hand_window = HandWindow()
         self.hand_window.hide()
 

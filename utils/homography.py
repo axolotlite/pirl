@@ -1,15 +1,15 @@
 import cv2
 import numpy as np
+from cfg import CFG
 # from screeninfo import get_monitors
 
 
 class Homography(object):
-    def __init__(self, CFG) -> None:
-        self.CFG = CFG
+    def __init__(self) -> None:
         self.points = []
         self.count = 0
         self.h_matrix = None
-        self.pmon = CFG.pmons[CFG.handThreadScreen]
+        self.pmon = CFG.monitors[CFG.handThreadScreen]
         self.s_width, self.s_height = self.pmon.width, self.pmon.height
         self.camIdx = CFG.camIdx
 
@@ -32,10 +32,10 @@ class Homography(object):
         waitTime = 50
 
         cap = cv2.VideoCapture(self.camIdx)
-        if(self.CFG.MJPG):
+        if(CFG.MJPG):
             self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")) # add this line
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.CFG.width)
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.CFG.height)
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, CFG.width)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CFG.height)
         cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         cap_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 

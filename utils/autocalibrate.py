@@ -3,6 +3,7 @@ import numpy as np
 # import screeninfo
 from skimage.metrics import structural_similarity as ssim
 import os,sys
+from cfg import CFG
 sys.path.append(os.path.abspath('pyqt'))
 from screen_calibration_widget import CalibrationScreen, ManualScreen
 from PyQt5.QtCore import Qt, QTimer
@@ -11,8 +12,7 @@ import threading
 from time import sleep
 
 class Autocalibration:
-    def __init__(self, CFG):
-        self.CFG = CFG
+    def __init__(self):
         self.black_screen = None
         self.white_screen = None
         self.camIdx = CFG.camIdx
@@ -24,11 +24,11 @@ class Autocalibration:
             "manual": []
         }
         self.screen_id = CFG.mainScreen
-        if( len(CFG.pmons) == 1):
+        if(len(CFG.monitors) == 1):
             self.screen_id = 0
         #     print("single monitor detected")
         # self.pmon = screeninfo.get_monitors()[self.screen_id]
-        self.pmon = CFG.pmons[CFG.mainScreen]
+        self.pmon = CFG.monitors[CFG.mainScreen]
         # self.camIdx = 0
         self.failure_condition = ord('q')
         self.window = None
@@ -81,7 +81,7 @@ class Autocalibration:
             else:
                 self.points["manual"][self.count] = [x, y]
     def fallback_calibration(self):
-        self.window = ManualScreen(self.CFG)
+        self.window = ManualScreen()
         self.points["manual"] = self.window.points["manual"]
         self.window.close()
 
@@ -126,10 +126,10 @@ class Autocalibration:
         capture_count = 3
         # Initialize the camera device
         cap = cv2.VideoCapture(self.camIdx)
-        if(self.CFG.MJPG):
+        if(CFG.MJPG):
             cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")) # add this line
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.CFG.width)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.CFG.height)
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, CFG.width)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CFG.height)
         # Capture another image this time of the white screen
         for i in range(capture_count):
             _, image = cap.read()
