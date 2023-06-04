@@ -15,7 +15,6 @@ class Autocalibration:
     def __init__(self):
         self.black_screen = None
         self.white_screen = None
-        self.camIdx = CFG.camIdx
         self.count = 0
         self.default_points = []
         self.points = {
@@ -29,7 +28,6 @@ class Autocalibration:
         #     print("single monitor detected")
         # self.pmon = screeninfo.get_monitors()[self.screen_id]
         self.pmon = CFG.monitors[CFG.mainScreen]
-        # self.camIdx = 0
         self.failure_condition = ord('q')
         self.window = None
         self.autocalibration_thread = threading.Thread(target=self.autocalibrate)
@@ -126,7 +124,7 @@ class Autocalibration:
         """
         capture_count = 3
         # Initialize the camera device
-        cap = cv2.VideoCapture(self.camIdx)
+        cap = cv2.VideoCapture(CFG.camIdx)
         if(CFG.MJPG):
             cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")) # add this line
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, CFG.camWidth)

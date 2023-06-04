@@ -28,7 +28,6 @@ class HandThread(QThread):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._run_flag = True
-        self.camIdx = CFG.camIdx
         self.pmon = CFG.monitors[CFG.handThreadScreen]
         self.s_width, self.s_height = self.pmon.width, self.pmon.height
         self.startx, self.starty = 0, 0
@@ -38,7 +37,7 @@ class HandThread(QThread):
     def run(self):
         self.h.get_homography()
 
-        cap = cv2.VideoCapture(self.camIdx)
+        cap = cv2.VideoCapture(CFG.camIdx)
         if(CFG.MJPG):
             cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")) # add this line
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, CFG.camWidth)

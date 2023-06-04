@@ -76,13 +76,12 @@ class CalibrationScreen(QWidget):
 class ManualScreen(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.camIdx = CFG.camIdx
         self.screen = CFG.monitors[CFG.mainScreen]
         self.count = 0
         self.points = {"manual": []}
         self.breakflag = False
 
-        self.cap = cv2.VideoCapture(self.camIdx)
+        self.cap = cv2.VideoCapture(CFG.camIdx)
         if(CFG.MJPG):
             self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(
                 *"MJPG"))  # add this line

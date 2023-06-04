@@ -2,6 +2,7 @@ import sys
 import io
 import subprocess
 import os
+import time
 from PyQt5 import QtGui
 import numpy as np
 import inspect
@@ -9,8 +10,10 @@ from handrec import HandThread
 # from pynput.keyboard import Key, Listener
 from PyQt5.QtCore import Qt, QThread, QRect, pyqtSignal, pyqtSlot, QBuffer, QPoint, QTimer
 from PyQt5.QtWidgets import (QApplication, QLabel, QMainWindow, QVBoxLayout,
-                             QPushButton, QHBoxLayout, QWidget, QDesktopWidget, QFileDialog)
+                             QPushButton, QHBoxLayout, QWidget, QDesktopWidget, QFileDialog, QStatusBar, QToolBar, QAction, QComboBox, QErrorMessage)
 from PyQt5.QtGui import QPixmap, QImage, QKeyEvent, QFont, QPainter, QColor, QPen
+from PyQt5.QtMultimedia import QCamera, QCameraInfo, QCameraImageCapture
+from PyQt5.QtMultimediaWidgets import QCameraViewfinder
 from fitz import *
 
 from threading import Thread
@@ -19,7 +22,6 @@ from pyqt.select_window import Ui_Form
 from pyqt.screen_calibration_widget import CalibrationScreen
 from utils.autocalibrate import Autocalibration
 from utils.cv_wrapper import convert_image
-from time import sleep
 
 from cfg import CFG
 
@@ -382,6 +384,14 @@ class MainWindow(QMainWindow):
         self.new_pdf_button.setFont(font)
         self.new_pdf_button.clicked.connect(self.create_pdf)
 
+        self.set_cam_button = QPushButton("Choose camera")
+        self.set_cam_button.setFont(font)
+        self.set_cam_button.clicked.connect(self.set_cam)
+
+        self.set_screen_button = QPushButton("Choose main screen")
+        self.set_screen_button.setFont(font)
+        self.set_screen_button.clicked.connect(self.set_screen)
+
         label = QLabel("welcome to PIRL")
         label.setFont(QFont("Arial", 20))
         layout.addWidget(label)
@@ -389,6 +399,8 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.calibration_button)
         layout.addWidget(self.result_button)
         layout.addWidget(self.new_pdf_button)
+        layout.addWidget(self.set_cam_button)
+        layout.addWidget(self.set_screen_button)
 
         widget = QWidget()
         widget.setLayout(layout)
@@ -463,6 +475,13 @@ class MainWindow(QMainWindow):
         self.autocalibrator.create_widget()
         QTimer.singleShot(500, self.autocalibrator.start_calibration)
 
+    def set_cam(self):
+        self.csw = CameraSelectWindow()
+        self.csw.show()
+
+    def set_screen(self):
+        pass
+
     # def keyboard_pressing(self):
     #     with Listener( on_press=self.on_press, on_release= None) as listener:
     #         listener.join()
@@ -472,6 +491,130 @@ class MainWindow(QMainWindow):
     #     self.close()
 
 # print(autocalibrate())
+
+
+class CameraSelectWindow(QMainWindow):
+
+    # constructor
+    def __init__(self):
+        super().__init__()
+
+        # setting geometry
+        self.setGeometry(100, 100,
+                         800, 600)
+
+        # setting style sheet
+        self.setStyleSheet("background : lightgrey;")
+
+        # getting available cameras
+        self.available_cameras = QCameraInfo.availableCameras()
+
+        # if no camera found
+        if not self.available_cameras:
+            # exit the code
+            sys.exit()
+
+        # creating a status bar
+        self.status = QStatusBar()
+
+        # setting style sheet to the status bar
+        self.status.setStyleSheet("background : white;")
+
+        # adding status bar to the main window
+        self.setStatusBar(self.status)
+
+        # path to save
+        self.save_path = ""
+
+        # creating a QCameraViewfinder object
+        self.viewfinder = QCameraViewfinder()
+
+        # showing this viewfinder
+        self.viewfinder.show()
+
+        # Set the default camera.
+        self.select_camera(CFG.camIdx)
+
+        # creating a combo box for selecting camera
+        self.camera_selector = QComboBox()
+
+        # adding status tip to it
+        self.camera_selector.setStatusTip("Choose desired camera")
+
+        # adding tool tip to it
+        self.camera_selector.setToolTip("Select Camera")
+        self.camera_selector.setToolTipDuration(2500)
+
+        # adding items to the combo box
+        self.camera_selector.addItems([camera.description()
+                                       for camera in self.available_cameras])
+
+        # adding action to the combo box
+        # calling the select camera method
+        self.camera_selector.currentIndexChanged.connect(self.select_camera)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.viewfinder)
+        layout.addWidget(self.camera_selector)
+
+        central_widget = QWidget()
+        central_widget.setLayout(layout)
+
+        self.setCentralWidget(central_widget)
+
+        # setting window title
+        self.setWindowTitle("PyQt5 Cam")
+
+        # showing the main window
+        self.show()
+
+    # method to select camera
+    def select_camera(self, i):
+
+        # getting the selected camera
+        self.camera = QCamera(self.available_cameras[i])
+
+        # setting view finder to the camera
+        self.camera.setViewfinder(self.viewfinder)
+
+        # setting capture mode to the camera
+        self.camera.setCaptureMode(QCamera.CaptureStillImage)
+
+        # if any error occur show the alert
+        self.camera.error.connect(
+            lambda: self.alert(self.camera.errorString()))
+
+        # start the camera
+        self.camera.start()
+
+        # creating a QCameraImageCapture object
+        self.capture = QCameraImageCapture(self.camera)
+
+        # showing alert if error occur
+        self.capture.error.connect(lambda error_msg, error,
+                                   msg: self.alert(msg))
+
+        # when image captured showing message
+        self.capture.imageCaptured.connect(lambda d,
+                                           i: self.status.showMessage("Image captured : "
+                                                                      + str(self.save_seq)))
+
+        # getting current camera name
+        self.current_camera_name = self.available_cameras[i].description()
+
+        # initial save sequence
+        self.save_seq = 0
+        
+        CFG.camIdx = i
+        
+    # method for alerts
+    def alert(self, msg):
+
+        # error message
+        error = QErrorMessage(self)
+
+        # setting text to the error message
+        error.showMessage(msg)
 
 
 def main():

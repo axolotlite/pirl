@@ -11,7 +11,6 @@ class Homography(object):
         self.h_matrix = None
         self.pmon = CFG.monitors[CFG.handThreadScreen]
         self.s_width, self.s_height = self.pmon.width, self.pmon.height
-        self.camIdx = CFG.camIdx
 
     def on_mouse(self, event, x, y, flags, params):
         if event == cv2.EVENT_LBUTTONDOWN:
@@ -31,7 +30,7 @@ class Homography(object):
     def calibrate(self):
         waitTime = 50
 
-        cap = cv2.VideoCapture(self.camIdx)
+        cap = cv2.VideoCapture(CFG.camIdx)
         if(CFG.MJPG):
             self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")) # add this line
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, CFG.camWidth)
