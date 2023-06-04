@@ -8,7 +8,7 @@ import mouse
 from utils.homography import Homography
 from utils.helpers import CvFps
 from model import KeyPointClassifier
-from screeninfo import get_monitors
+# from screeninfo import get_monitors
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QThread
 from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QDesktopWidget
@@ -24,20 +24,25 @@ class HandThread(QThread):
     coor_signal = pyqtSignal(tuple)
     click_signal = pyqtSignal(bool)
     
-    def __init__(self, parent=None):
+    def __init__(self,CFG, parent=None):
         super().__init__(parent)
+        self.CFG = CFG
         self._run_flag = True
-        self.camIdx = 0
-        self.pmon = get_monitors()[0]
+        self.camIdx = CFG.camIdx
+        self.pmon = CFG.pmons[CFG.handThreadScreen]
         self.s_width, self.s_height = self.pmon.width, self.pmon.height
         self.startx, self.starty = 0, 0
-        self.h = Homography()
+        self.h = Homography(CFG=CFG)
         self.selected_hand = "right"
 
     def run(self):
         self.h.get_homography()
 
         cap = cv2.VideoCapture(self.camIdx)
+        if(self.CFG.MJPG):
+            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")) # add this line
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.CFG.width)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.CFG.height)
         self.cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.cap_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 

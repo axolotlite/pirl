@@ -73,18 +73,20 @@ class CalibrationScreen(QWidget):
 
 
 class ManualScreen(QMainWindow):
-    def __init__(self, camIdx=0, screen=None):
+    def __init__(self, CFG):
         super().__init__()
-        self.camIdx = camIdx
-        self.screen = screen
+        self.CFG = CFG
+        self.camIdx = CFG.camIdx
+        self.screen = CFG.pmons[CFG.mainScreen]
         self.count = 0
         self.points = {"manual": []}
         self.breakflag = False
 
         self.cap = cv2.VideoCapture(self.camIdx)
-        self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")) # add this line
-        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        if(CFG.MJPG):
+            self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")) # add this line
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.CFG.width)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.CFG.height)
         self.cap_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.cap_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 

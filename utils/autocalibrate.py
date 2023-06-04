@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-import screeninfo
+# import screeninfo
 from skimage.metrics import structural_similarity as ssim
 import os,sys
 sys.path.append(os.path.abspath('pyqt'))
@@ -11,10 +11,11 @@ import threading
 from time import sleep
 
 class Autocalibration:
-    def __init__(self):
+    def __init__(self, CFG):
+        self.CFG = CFG
         self.black_screen = None
         self.white_screen = None
-        self.camIdx = 0
+        self.camIdx = CFG.camIdx
         self.count = 0
         self.default_points = []
         self.points = {
@@ -22,13 +23,13 @@ class Autocalibration:
             "boundaries_mask": [],
             "manual": []
         }
-        self.screen_id = 1
-        screens = screeninfo.get_monitors()
-        if( len(screens) == 1):
+        self.screen_id = CFG.mainScreen
+        if( len(CFG.pmons) == 1):
             self.screen_id = 0
-            print("single monitor detected")
-        self.screen = screeninfo.get_monitors()[self.screen_id]
-        self.camIdx = 0
+        #     print("single monitor detected")
+        # self.pmon = screeninfo.get_monitors()[self.screen_id]
+        self.pmon = CFG.pmons[CFG.mainScreen]
+        # self.camIdx = 0
         self.failure_condition = ord('q')
         self.window = None
         self.autocalibration_thread = threading.Thread(target=self.autocalibrate)
@@ -80,7 +81,7 @@ class Autocalibration:
             else:
                 self.points["manual"][self.count] = [x, y]
     def fallback_calibration(self):
-        self.window = ManualScreen(self.camIdx, self.screen)
+        self.window = ManualScreen(self.CFG)
         self.points["manual"] = self.window.points["manual"]
         self.window.close()
 
@@ -104,7 +105,7 @@ class Autocalibration:
                                color=(0, 220, 0), thickness=10)
         cv2.namedWindow('Harris Corners')
         cv2.moveWindow('Harris Corners', int(
-            self.screen.width * 1.3), int(self.screen.height * 0.3))
+            self.pmon.width * 1.3), int(self.pmon.height * 0.3))
         cv2.imshow('Harris Corners', image)
         key = cv2.waitKey(0)
         cv2.destroyAllWindows()
@@ -125,6 +126,10 @@ class Autocalibration:
         capture_count = 3
         # Initialize the camera device
         cap = cv2.VideoCapture(self.camIdx)
+        if(self.CFG.MJPG):
+            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")) # add this line
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.CFG.width)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.CFG.height)
         # Capture another image this time of the white screen
         for i in range(capture_count):
             _, image = cap.read()
@@ -297,15 +302,15 @@ class Autocalibration:
     def order_points(self, points):
         corners = [
             [0, 0],
-            [0, self.screen.height],
-            [self.screen.width, self.screen.height],
-            [self.screen.width, 0]
+            [0, self.pmon.height],
+            [self.pmon.width, self.pmon.height],
+            [self.pmon.width, 0]
         ]
         ordered_points = []
         point_idx = 0
         pidxs = []
         for idx, corner in enumerate(corners):
-            min_distance = self.screen.height * self.screen.width
+            min_distance = self.pmon.height * self.pmon.width
             for pidx, point in enumerate(points):
                 if pidx in pidxs:
                     continue

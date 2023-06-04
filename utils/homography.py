@@ -1,16 +1,17 @@
 import cv2
 import numpy as np
-from screeninfo import get_monitors
+# from screeninfo import get_monitors
 
 
 class Homography(object):
-    def __init__(self) -> None:
+    def __init__(self, CFG) -> None:
+        self.CFG = CFG
         self.points = []
         self.count = 0
         self.h_matrix = None
-        self.pmon = get_monitors()[0]
+        self.pmon = CFG.pmons[CFG.handThreadScreen]
         self.s_width, self.s_height = self.pmon.width, self.pmon.height
-        self.camIdx = 0
+        self.camIdx = CFG.camIdx
 
     def on_mouse(self, event, x, y, flags, params):
         if event == cv2.EVENT_LBUTTONDOWN:
@@ -31,6 +32,10 @@ class Homography(object):
         waitTime = 50
 
         cap = cv2.VideoCapture(self.camIdx)
+        if(self.CFG.MJPG):
+            self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")) # add this line
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.CFG.width)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.CFG.height)
         cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         cap_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
