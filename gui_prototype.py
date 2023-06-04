@@ -2,6 +2,7 @@ import sys
 import io
 import subprocess
 import os
+from PyQt5 import QtGui
 import numpy as np
 import inspect
 from handrec import HandThread
@@ -41,12 +42,33 @@ class VirtualCursor(QLabel):
         self.global_x = self.mapToGlobal(QPoint(0,0)).x()
         
 
-    def resizeEvent(self, event):
+    def setCoordinates(self):
+        self.global_x_min = self.mapToGlobal(QPoint(0,0)).x()
+        self.global_y_min = self.mapToGlobal(QPoint(0,0)).y()
+        self.global_x_max = self.mapToGlobal(QPoint(self.width(),0)).x()
+        self.global_y_max = self.mapToGlobal(QPoint(0,self.height())).y()
+        # print(f"Self x = {self.global_x}, self y = {self.global_y}")
+        # self.global_parent_x = self.parent().mapToGlobal(QPoint(0,0)).x() 
+        # self.global_parent_y = self.parent().mapToGlobal(QPoint(0,0)).y()
+        # print(f"Parent x = {self.global_parent_x}, parent y = {self.global_parent_y}")
+        
+    
+    def normalizeCoordinates(self, e):
+        if e[0] >= self.global_x_min and e[0] <= self.global_x_max and e[1] >= self.global_y_min and e[1] <= self.global_y_max:
+            e = (e[0] - self.global_x_min, e[1] - self.global_y_min)
+            return True, e
+        return False, e
+
+
+    # def moveEvent(self, event) -> None:
+    #     self.setCoordinates()
+    #     return super().moveEvent(event)
+
+
+    def resizeEvent(self, event) -> None:
         # When the window is resized, resize the pixmap to the new window size
         # print(f" resize label {self.mapToGlobal(QPoint(0,0))}")
-        self.global_x = self.mapToGlobal(QPoint(0,0)).x()
-        self.global_parent_x = self.parent().mapToGlobal(QPoint(0,0)).x()  
-        self.diff_x = self.global_x - self.global_parent_x  
+        self.setCoordinates()
         pixmap = self.pixmap().scaled(self.size(), aspectRatioMode=Qt.KeepAspectRatio)
         self.setPixmap(pixmap)
 
@@ -63,29 +85,31 @@ class VirtualCursor(QLabel):
 
     @pyqtSlot(tuple)
     def mouseMove(self, e):
-        self._position = QPoint(e[0] - self.diff_x , e[1])
-        # print(f"in move {self._position}")
-        # print(self.mapToGlobal(self._position))
-        # print(self.mapFromGlobal(self.mapToGlobal(self._position)))
-        if self.pressed == True:
-            self.has_been_draw = True
-            if self.last_x is None:  # First event.
-                self.last_x = e[0] - self.diff_x
+        success, e = self.normalizeCoordinates(e)
+        if success:
+            self._position = QPoint(e[0], e[1])
+            # print(f"in move {self._position}")
+            # print(self.mapToGlobal(self._position))
+            # print(self.mapFromGlobal(self.mapToGlobal(self._position)))
+            if self.pressed == True:
+                self.has_been_draw = True
+                if self.last_x is None:  # First event.
+                    self.last_x = e[0]
+                    self.last_y = e[1]
+
+                painter = QPainter(self.pixmap())
+                pen = QPen()
+                pen.setWidth(5)
+                pen.setCapStyle(Qt.RoundCap)
+                painter.setPen(pen)
+                painter.setRenderHint(QPainter.Antialiasing)
+                painter.drawLine(self.last_x, self.last_y, e[0], e[1])
+                painter.end()
+                self.update()
+
+                self.last_x = e[0]
                 self.last_y = e[1]
-
-            painter = QPainter(self.pixmap())
-            pen = QPen()
-            pen.setWidth(5)
-            pen.setCapStyle(Qt.RoundCap)
-            painter.setPen(pen)
-            painter.setRenderHint(QPainter.Antialiasing)
-            painter.drawLine(self.last_x, self.last_y, e[0] - self.diff_x, e[1])
-            painter.end()
             self.update()
-
-            self.last_x = e[0] - self.diff_x
-            self.last_y = e[1]
-        self.update()
 
     @pyqtSlot(bool)
     def mouseClick(self, clicked):
