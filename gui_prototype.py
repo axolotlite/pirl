@@ -21,6 +21,9 @@ from utils.autocalibrate import Autocalibration
 from utils.cv_wrapper import convert_image
 from time import sleep
 
+from cfg import CFG
+
+
 class VirtualCursor(QLabel):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -35,31 +38,31 @@ class VirtualCursor(QLabel):
         self._opacity = 0.4
         self.last_x = None
         self.last_y = None
-        self.global_x = self.mapToGlobal(QPoint(0,0)).x()
-        
+        self.global_x = self.mapToGlobal(QPoint(0, 0)).x()
 
     def setCoordinates(self):
-        self.global_x_min = self.mapToGlobal(QPoint(0,0)).x()
-        self.global_y_min = self.mapToGlobal(QPoint(0,0)).y()
-        self.global_x_max = self.mapToGlobal(QPoint(self.width(),0)).x()
-        self.global_y_max = self.mapToGlobal(QPoint(0,self.height())).y()
-        # print(f"Self x = {self.global_x}, self y = {self.global_y}")
-        # self.global_parent_x = self.parent().mapToGlobal(QPoint(0,0)).x() 
-        # self.global_parent_y = self.parent().mapToGlobal(QPoint(0,0)).y()
-        # print(f"Parent x = {self.global_parent_x}, parent y = {self.global_parent_y}")
-        
-    
+        self.global_x_min = self.mapToGlobal(QPoint(0, 0)).x()
+        self.global_y_min = self.mapToGlobal(QPoint(0, 0)).y()
+        self.global_x_max = self.mapToGlobal(QPoint(self.width(), 0)).x()
+        self.global_y_max = self.mapToGlobal(QPoint(0, self.height())).y()
+        # Adjust coordinates if not primary screen
+        if CFG.mainScreen:
+            self.global_x_min -= CFG.monitors[CFG.mainScreen].x
+            self.global_y_min -= CFG.monitors[CFG.mainScreen].y
+            self.global_x_max -= CFG.monitors[CFG.mainScreen].x
+            self.global_y_max -= CFG.monitors[CFG.mainScreen].y
+        # print(f"Self xmin = {self.global_x_min}, self ymin = {self.global_y_min}")
+        # print(f"Self xmax = {self.global_x_max}, self ymax = {self.global_y_max}")
+
     def normalizeCoordinates(self, e):
         if e[0] >= self.global_x_min and e[0] <= self.global_x_max and e[1] >= self.global_y_min and e[1] <= self.global_y_max:
             e = (e[0] - self.global_x_min, e[1] - self.global_y_min)
             return True, e
         return False, e
 
-
     # def moveEvent(self, event) -> None:
     #     self.setCoordinates()
     #     return super().moveEvent(event)
-
 
     def resizeEvent(self, event) -> None:
         # When the window is resized, resize the pixmap to the new window size
@@ -76,8 +79,6 @@ class VirtualCursor(QLabel):
         painter.setBrush(QColor(255, 255, 0, int(self._opacity * 255)))
         painter.drawEllipse(self._position, 5, 5)
         painter.end()
-        
-        
 
     @pyqtSlot(tuple)
     def mouseMove(self, e):
@@ -151,8 +152,8 @@ class pdf_window(QMainWindow):
         widget = QWidget()
         widget.setLayout(self.layout)
         self.setCentralWidget(widget)
-        
-    def set_hand_thread(self,hand_thread):
+
+    def set_hand_thread(self, hand_thread):
         print("let's gooo")
         self.hand_thread = hand_thread
 
@@ -184,7 +185,8 @@ class pdf_window(QMainWindow):
     def resizeEvent(self, event):
         # When the window is resized, resize the pixmap to the new window size
         # print(F"resize pdf {self.mapToGlobal(QPoint(0,0))}")
-        self.pixmap = self.pixmap.scaled(self.size(), aspectRatioMode=Qt.KeepAspectRatio)
+        self.pixmap = self.pixmap.scaled(
+            self.size(), aspectRatioMode=Qt.KeepAspectRatio)
         self.label.setPixmap(self.pixmap)
 
     def write_next(self):
@@ -320,7 +322,7 @@ class HandWindow(QMainWindow):
     def initUI(self):
         self.setWindowTitle('hand_window')
         self.resize(640, 480)  # default size
-        
+
         # Set the central widget of the window to the image label
         self.setCentralWidget(self.image)
 
@@ -333,9 +335,10 @@ class HandWindow(QMainWindow):
 
     @pyqtSlot(np.ndarray)
     def update_image(self, cv_img):
-        qt_img = convert_image(cv_img, self.image.size().width(), self.image.size().height())
+        qt_img = convert_image(
+            cv_img, self.image.size().width(), self.image.size().height())
         self.image.setPixmap(qt_img)
-        
+
     def resizeEvent(self, event):
         # Resize the label to match the size of the window
         self.image.resize(self.width(), self.height())
@@ -402,11 +405,13 @@ class MainWindow(QMainWindow):
             doc = fitz.open(file_name)
             self.w = pdf_window(doc)
             self.w.set_hand_thread(self.hand_window.hand_thread)
-            screen = QDesktopWidget().screenGeometry(1)
+            screen = QDesktopWidget().screenGeometry(CFG.mainScreen)
             self.w.setGeometry(QRect(screen))
             # here you pass just the first mouse move of the first page when we need to pass the mouseMove the page we are in since we always do another cursor when new page
-            self.hand_window.hand_thread.coor_signal.connect(self.w.label.mouseMove)
-            self.hand_window.hand_thread.click_signal.connect(self.w.label.mouseClick)
+            self.hand_window.hand_thread.coor_signal.connect(
+                self.w.label.mouseMove)
+            self.hand_window.hand_thread.click_signal.connect(
+                self.w.label.mouseClick)
             self.show()
             self.w.showMaximized()
             self.hide()
@@ -422,6 +427,7 @@ class MainWindow(QMainWindow):
         screen = QDesktopWidget().screenGeometry(0)
         self.w.setGeometry(QRect(screen))
         self.w.show()
+
     def show_results(self):
         # self.autocalibrator.black_screen = self.autocalibration_thread.images[0]
         # self.autocalibrator.white_screen = self.autocalibration_thread.images[1]
@@ -456,7 +462,6 @@ class MainWindow(QMainWindow):
     def calibrate_screen(self):
         self.autocalibrator.create_widget()
         QTimer.singleShot(500, self.autocalibrator.start_calibration)
-        
 
     # def keyboard_pressing(self):
     #     with Listener( on_press=self.on_press, on_release= None) as listener:

@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 # import screeninfo
 from skimage.metrics import structural_similarity as ssim
-import os,sys
 from cfg import CFG
+import os,sys
 sys.path.append(os.path.abspath('pyqt'))
 from screen_calibration_widget import CalibrationScreen, ManualScreen
 from PyQt5.QtCore import Qt, QTimer
@@ -82,6 +82,7 @@ class Autocalibration:
                 self.points["manual"][self.count] = [x, y]
     def fallback_calibration(self):
         self.window = ManualScreen()
+        self.window.start()
         self.points["manual"] = self.window.points["manual"]
         self.window.close()
 
@@ -128,8 +129,8 @@ class Autocalibration:
         cap = cv2.VideoCapture(self.camIdx)
         if(CFG.MJPG):
             cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")) # add this line
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, CFG.width)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CFG.height)
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, CFG.camWidth)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CFG.camHeight)
         # Capture another image this time of the white screen
         for i in range(capture_count):
             _, image = cap.read()

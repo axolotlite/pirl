@@ -41,8 +41,8 @@ class HandThread(QThread):
         cap = cv2.VideoCapture(self.camIdx)
         if(CFG.MJPG):
             cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")) # add this line
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, CFG.width)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CFG.height)
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, CFG.camWidth)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CFG.camHeight)
         self.cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.cap_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 

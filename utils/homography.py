@@ -34,8 +34,8 @@ class Homography(object):
         cap = cv2.VideoCapture(self.camIdx)
         if(CFG.MJPG):
             self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")) # add this line
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, CFG.width)
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CFG.height)
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, CFG.camWidth)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CFG.camHeight)
         cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         cap_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 

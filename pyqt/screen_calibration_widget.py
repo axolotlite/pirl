@@ -84,9 +84,10 @@ class ManualScreen(QMainWindow):
 
         self.cap = cv2.VideoCapture(self.camIdx)
         if(CFG.MJPG):
-            self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")) # add this line
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, CFG.width)
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CFG.height)
+            self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(
+                *"MJPG"))  # add this line
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, CFG.camWidth)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CFG.camHeight)
         self.cap_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.cap_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
@@ -98,9 +99,13 @@ class ManualScreen(QMainWindow):
         self.setMouseTracking(True)
         self.label.setMouseTracking(True)
         # self.move(int(self.screen.width() * 1.3), int(self.screen.height() * 0.3))
-        # QTimer.singleShot(500, self.fallback_calibration)
+
+    def start(self):
         self.show()
         self.fallback_calibration()
+
+    def delayedStart(self):
+        QTimer.singleShot(500, self.start)
 
     def mousePressEvent(self, event):
         if self.count < 4:
@@ -149,7 +154,6 @@ class ManualScreen(QMainWindow):
             QApplication.processEvents()
 
         self.cap.release()
-        print(self.points["manual"])
         self.close()
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
