@@ -1,4 +1,7 @@
 # importing libraries
+import os
+import sys
+sys.path.insert(0, os.path.abspath(__file__ + "/../../"))
 from pyqt.number_widget import NumberWidget
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
@@ -7,9 +10,6 @@ from cfg import CFG
 import numpy as np
 from time import sleep
 import cv2
-import sys
-import os
-sys.path.append(os.path.abspath('.'))
 
 
 class CalibrationScreen(QWidget):

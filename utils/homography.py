@@ -1,7 +1,9 @@
-import cv2
-import numpy as np
+import os
+import sys
+sys.path.insert(0, os.path.abspath(__file__ + "/../../"))
 from cfg import CFG
-# from screeninfo import get_monitors
+import numpy as np
+import cv2
 
 
 class Homography(object):
@@ -31,56 +33,63 @@ class Homography(object):
         waitTime = 50
 
         cap = cv2.VideoCapture(CFG.camIdx)
-        if(CFG.MJPG):
-            self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")) # add this line
+        if CFG.MJPG:
+            self.cap.set(
+                cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")
+            )  # add this line
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, CFG.camWidth)
             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CFG.camHeight)
         cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         cap_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
-        while (cap.isOpened()):
-
+        while cap.isOpened():
             success, frame = cap.read()
             if not success:
                 print("Ignoring empty camera frame.")
                 # If loading a video, use 'break' instead of 'continue'.
                 continue
 
-            cv2.namedWindow('Calibration')
-            cv2.moveWindow('Calibration', int(
-                self.s_width * 1.3), int(self.s_height * 0.3))
-            cv2.setMouseCallback('Calibration', self.on_mouse)
+            cv2.namedWindow("Calibration")
+            cv2.moveWindow(
+                "Calibration", int(self.s_width * 1.3), int(self.s_height * 0.3)
+            )
+            cv2.setMouseCallback("Calibration", self.on_mouse)
 
             if self.count == 4:
                 break
 
             for i in range(len(self.points)):
-                if (i + 1 == len(self.points)):
-                    cv2.line(frame, self.points[i],
-                             self.points[0], (187, 87, 231), 2)
+                if i + 1 == len(self.points):
+                    cv2.line(frame, self.points[i], self.points[0], (187, 87, 231), 2)
                 else:
                     cv2.line(
-                        frame, self.points[i], self.points[i+1], (187, 87, 231), 2)
+                        frame, self.points[i], self.points[i + 1], (187, 87, 231), 2
+                    )
 
-            cv2.imshow('Calibration', frame)
+            cv2.imshow("Calibration", frame)
 
             key = cv2.waitKey(waitTime)
 
-            if key == ord('b'):
+            if key == ord("b"):
                 break
-            elif key == ord('r'):
+            elif key == ord("r"):
                 self.count = 0
                 self.points = []
-        cv2.destroyWindow('Calibration')
+        cv2.destroyWindow("Calibration")
         cap.release()
 
     def get_homography(self):
-        """Calculates the homography matrix and stores it in the class variable h_matrix
-        """
+        """Calculates the homography matrix and stores it in the class variable h_matrix"""
         print(self.points)
         pts_src = np.array(self.points)
-        pts_dst = np.array([[0, 0], [0, self.s_height], [
-            self.s_width, self.s_height], [self.s_width, 0]])
+        pts_dst = np.array(
+            [
+                [0, 0],
+                [0, self.s_height],
+                [self.s_width, self.s_height],
+                [self.s_width, 0],
+            ]
+        )
 
         self.h_matrix, _ = cv2.findHomography(pts_src, pts_dst)
 
@@ -93,8 +102,7 @@ class Homography(object):
         Returns:
             numpy.ndarray: Image warped based on h_matrix
         """
-        return cv2.warpPerspective(
-            img, self.h_matrix, (self.s_width, self.s_height))
+        return cv2.warpPerspective(img, self.h_matrix, (self.s_width, self.s_height))
 
     def normalize_point(self, x, y):
         """Finds the coordinates matching the source coordinates in the warped image
@@ -107,7 +115,7 @@ class Homography(object):
             int, int: position on x-axis and y-axis in warped image
         """
         pts = np.dot(self.h_matrix, np.array([x, y, 1.0]))
-        pts = pts/pts[-1]
+        pts = pts / pts[-1]
         return int(pts[0]), int(pts[1])
 
     def dejitter(self, x, y):

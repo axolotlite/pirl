@@ -1,20 +1,21 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import csv
-import copy
-import argparse
-import itertools
-from operator import itemgetter
-from collections import Counter
-from collections import deque
-
-import cv2 as cv
-import numpy as np
-import mediapipe as mp
-
-from utils.helpers import CvFps
-from model import KeyPointClassifier
+import os
+import sys
+sys.path.insert(0, os.path.abspath(__file__ + "/../../"))
 from model import PointHistoryClassifier
+from model import KeyPointClassifier
+from utils.helpers import CvFps
+import mediapipe as mp
+import numpy as np
+import cv2 as cv
+from collections import deque
+from collections import Counter
+from operator import itemgetter
+import itertools
+import argparse
+import copy
+import csv
 
 
 def get_args():
@@ -100,7 +101,7 @@ def main():
     mode = 0
 
     while cap.isOpened():
-        fps = cvFps.get()   
+        fps = cvFps.get()
 
         # Process Key (ESC: end) #################################################
         key = cv.waitKey(10)
@@ -112,7 +113,7 @@ def main():
         ret, image = cap.read()
         if not ret:
             break
-        
+
         image = cv.flip(image, 1)  # Mirror display
         debug_image = copy.deepcopy(image)
 

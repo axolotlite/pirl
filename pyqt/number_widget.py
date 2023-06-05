@@ -1,8 +1,9 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel,QDesktopWidget
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QDesktopWidget
 from PyQt5.QtGui import QFont, QResizeEvent, QPainter
 from PyQt5.QtCore import Qt, QRectF, QTimer, QSize
 from pyqt.Clickable_Label import Label
+
 
 class NumberWidget(QWidget):
     def __init__(self):
@@ -14,7 +15,8 @@ class NumberWidget(QWidget):
         height = int(screen_size.height() / 10)
         widget_size = QSize(width, height)
 
-        self.setWindowFlags(Qt.Window | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(
+            Qt.Window | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
 
         font = QFont("Arial", 100, QFont.Bold)
@@ -29,6 +31,7 @@ class NumberWidget(QWidget):
 
     def update_number(self, number):
         self.label.setText(str(number))
+
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
 
@@ -44,8 +47,8 @@ class NumberWidget(QWidget):
         rect = QRectF(0, 0, size, size)
         painter.drawEllipse(rect)
         painter.fillRect(rect, Qt.transparent)
-        
-    def center(self,screen_number):
+
+    def center(self, screen_number):
         qtRectangle = self.frameGeometry()
         centerPoint = QDesktopWidget().screenGeometry(screen_number).center()
         # Offset the window a bit higher

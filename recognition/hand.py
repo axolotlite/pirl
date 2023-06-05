@@ -1,30 +1,29 @@
-import csv
-import copy
-import itertools
-import cv2
-import mediapipe as mp
-import numpy as np
-import mouse
-from utils.homography import Homography
-from utils.helpers import CvFps
+import os
+import sys
+sys.path.insert(0, os.path.abspath(__file__ + "/../../"))
+from cfg import CFG
+from PyQt5.QtCore import pyqtSignal, QThread
 from model import KeyPointClassifier
+from utils.helpers import CvFps
+from utils.homography import Homography
+import numpy as np
+import mediapipe as mp
+import cv2
+import itertools
+import copy
+import csv
 # from screeninfo import get_monitors
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QThread
-from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QDesktopWidget
-from PyQt5.QtGui import QPixmap
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 # mp_hands = mp.solutions.hands #changing to holistic
 mp_holistic = mp.solutions.holistic
 
-from cfg import CFG
 
 class HandThread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
     coor_signal = pyqtSignal(tuple)
     click_signal = pyqtSignal(bool)
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._run_flag = True
@@ -39,7 +38,8 @@ class HandThread(QThread):
 
         cap = cv2.VideoCapture(CFG.camIdx)
         if(CFG.MJPG):
-            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")) # add this line
+            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(
+                *"MJPG"))  # add this line
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, CFG.camWidth)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CFG.camHeight)
         self.cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
@@ -74,8 +74,7 @@ class HandThread(QThread):
                 # Draw the hand annotations on the image.
                 image.flags.writeable = True
                 image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                
-                    
+
                 if self.selected_hand == "right":
                     hand_result = results.right_hand_landmarks
                 elif self.selected_hand == "left":
@@ -92,11 +91,9 @@ class HandThread(QThread):
         """Sets run flag to False and waits for thread to finish"""
         self._run_flag = False
         self.wait()
-        
-        
+
     def set_homography_points(self, points):
         self.h.points = points
-
 
     def gesture_recognition(self, image, landmarks):
 

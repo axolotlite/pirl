@@ -1,15 +1,17 @@
-import cv2
-import numpy as np
-# import screeninfo
-from skimage.metrics import structural_similarity as ssim
-from cfg import CFG
-import os,sys
-sys.path.append(os.path.abspath('pyqt'))
-from screen_calibration_widget import CalibrationScreen, ManualScreen
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtWidgets import QApplication
-import threading
+import os
+import sys
+sys.path.insert(0, os.path.abspath(__file__ + "/../../"))
 from time import sleep
+import threading
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtCore import Qt, QTimer
+from pyqt.screen_calibration_widget import CalibrationScreen, ManualScreen
+from cfg import CFG
+from skimage.metrics import structural_similarity as ssim
+import numpy as np
+import cv2
+# import screeninfo
+
 
 class Autocalibration:
     def __init__(self):
@@ -30,16 +32,20 @@ class Autocalibration:
         self.pmon = CFG.monitors[CFG.mainScreen]
         self.failure_condition = ord('q')
         self.window = None
-        self.autocalibration_thread = threading.Thread(target=self.autocalibrate)
+        self.autocalibration_thread = threading.Thread(
+            target=self.autocalibrate)
     # This is hacky code and needs to be made less dirty.
+
     def create_widget(self):
         # # create the instance of our Window
         print("Widget creation inbound")
         self.window = CalibrationScreen()
         self.window.select_screen()
         print("Widget creation done")
+
     def start_calibration(self):
         self.autocalibration_thread.start()
+
     def capture_images(self):
         # self.window = window
         sleep_duration = 1
@@ -60,10 +66,11 @@ class Autocalibration:
         sleep(sleep_duration)
         self.window.hide()
         self.window.close()
-    
+
     def set_points(self, mask_type):
         print(f"default mask: {mask_type}")
         self.default_points = self.points[mask_type]
+
     def on_mouse(self, event, x, y, flags, params):
         if event == cv2.EVENT_LBUTTONDOWN:
             if self.count < 4:
@@ -78,6 +85,7 @@ class Autocalibration:
                 pass
             else:
                 self.points["manual"][self.count] = [x, y]
+
     def fallback_calibration(self):
         self.window = ManualScreen()
         self.window.start()
@@ -93,7 +101,8 @@ class Autocalibration:
             image = cv2.circle(image, point, radius=0,
                                color=(0, 220, 0), thickness=10)
         return image
-    #should be removed
+    # should be removed
+
     def show_corners(self):
         image = self.white_screen.copy()
         for idx, point in enumerate(self.points):
@@ -115,6 +124,7 @@ class Autocalibration:
             func()
             return True
         return False
+
     def capture_screen(self):
         """
         Captures a picture of a screen when it's white and another when it's black.
@@ -126,7 +136,8 @@ class Autocalibration:
         # Initialize the camera device
         cap = cv2.VideoCapture(CFG.camIdx)
         if(CFG.MJPG):
-            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")) # add this line
+            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(
+                *"MJPG"))  # add this line
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, CFG.camWidth)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CFG.camHeight)
         # Capture another image this time of the white screen
@@ -212,14 +223,15 @@ class Autocalibration:
         harris_corners = cv2.dilate(harris_corners, kernel, iterations=2)
         # Find all points fulfilling this condition
         locations = np.where(harris_corners > 0.09 * harris_corners.max())
-        #invert then transpose it
-        coords = np.vstack((locations[1],locations[0])).T
+        # invert then transpose it
+        coords = np.vstack((locations[1], locations[0])).T
         if(len(coords)):
-            _, centers = self.k_means(coords, 4, self.select_four_points(coords))
+            _, centers = self.k_means(
+                coords, 4, self.select_four_points(coords))
             return(centers)
         else:
             print("autocalibraion failed to find points")
-            return(np.array([[0,0],[0,0],[0,0],[0,0]]))
+            return(np.array([[0, 0], [0, 0], [0, 0], [0, 0]]))
 
     def select_four_points(self, points):
         """
@@ -324,18 +336,20 @@ class Autocalibration:
         print(ordered_points)
         print(pidxs)
         return ordered_points
+
     def autocalibrate(self):
-        #capture two pictures of the screen
+        # capture two pictures of the screen
         self.capture_images()
-        #create masks
+        # create masks
         boundaries_mask = self.mask_screen_boundaries()
         diff_mask = self.mask_screen_diff()
-        
+
         points = self.Harris_Corner_Method(self.white_screen.copy(), diff_mask)
         points = self.order_points(points)
         self.points["diff_mask"] = points
 
-        points = self.Harris_Corner_Method(self.white_screen.copy(), boundaries_mask)
+        points = self.Harris_Corner_Method(
+            self.white_screen.copy(), boundaries_mask)
         points = self.order_points(points)
         self.points["boundaries_mask"] = points
 

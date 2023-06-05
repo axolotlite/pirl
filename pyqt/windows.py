@@ -1,6 +1,9 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(__file__ + "/../../"))
 from cfg import CFG
 from utils.cv_wrapper import convert_image
-from handrec import HandThread
+from recognition.hand import HandThread
 from fitz import fitz
 from PyQt5.QtMultimediaWidgets import QCameraViewfinder
 from PyQt5.QtMultimedia import QCamera, QCameraInfo, QCameraImageCapture
@@ -10,9 +13,6 @@ from PyQt5.QtWidgets import (QApplication, QLabel, QMainWindow, QVBoxLayout,
 from PyQt5.QtCore import Qt, QThread, QRect, pyqtSignal, pyqtSlot, QBuffer, QPoint, QTimer
 import numpy as np
 import io
-import sys
-import os
-sys.path.insert(0, os.path.abspath(__file__ + "/../../"))
 
 
 class VirtualCursor(QLabel):
