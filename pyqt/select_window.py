@@ -10,7 +10,10 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from pyqt.Clickable_Label import Label #This has been modified and upon regenerating the file from slected_window.ui it will be lost.
+from pyqt.Clickable_Label import (
+    Label,
+)  # This has been modified and upon regenerating the file from slected_window.ui it will be lost.
+
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -49,6 +52,7 @@ class Ui_Form(object):
 
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
     ui = Ui_Form()

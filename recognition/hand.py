@@ -1,5 +1,5 @@
-import os
-import sys
+import sys, os
+
 sys.path.insert(0, os.path.abspath(__file__ + "/../../"))
 from cfg import CFG
 from PyQt5.QtCore import pyqtSignal, QThread
@@ -12,6 +12,7 @@ import cv2
 import itertools
 import copy
 import csv
+
 # from screeninfo import get_monitors
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
@@ -37,9 +38,10 @@ class HandThread(QThread):
         self.h.get_homography()
 
         cap = cv2.VideoCapture(CFG.camIdx)
-        if(CFG.MJPG):
-            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(
-                *"MJPG"))  # add this line
+        if CFG.MJPG:
+            cap.set(
+                cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")
+            )  # add this line
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, CFG.camWidth)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CFG.camHeight)
         self.cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
@@ -49,14 +51,15 @@ class HandThread(QThread):
         cvFps = CvFps(buffer_len=10)
 
         with mp_holistic.Holistic(
-                min_detection_confidence=0.5,
-                min_tracking_confidence=0.5,
-                static_image_mode=False,
-                model_complexity=0,
-                smooth_landmarks=True,
-                enable_segmentation=True,
-                smooth_segmentation=True,
-                refine_face_landmarks=False) as holistic:
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5,
+            static_image_mode=False,
+            model_complexity=0,
+            smooth_landmarks=True,
+            enable_segmentation=True,
+            smooth_segmentation=True,
+            refine_face_landmarks=False,
+        ) as holistic:
             while cap.isOpened() and self._run_flag:
                 fps = cvFps.get()
 
@@ -80,8 +83,7 @@ class HandThread(QThread):
                 elif self.selected_hand == "left":
                     hand_result = results.left_hand_landmarks
                 if hand_result:
-                    self.gesture_recognition(
-                        image, hand_result)
+                    self.gesture_recognition(image, hand_result)
                 image = self.h.normalize_img(image)
                 image = cvFps.draw(image, fps)
                 self.change_pixmap_signal.emit(image)
@@ -96,27 +98,23 @@ class HandThread(QThread):
         self.h.points = points
 
     def gesture_recognition(self, image, landmarks):
-
         keypoint_classifier = KeyPointClassifier()
         # Read labels ###########################################################
-        with open('model/keypoint_classifier/keypoint_classifier_label.csv',
-                  encoding='utf-8-sig') as f:
+        with open(
+            "model/keypoint_classifier/keypoint_classifier_label.csv",
+            encoding="utf-8-sig",
+        ) as f:
             keypoint_classifier_labels = csv.reader(f)
-            keypoint_classifier_labels = [
-                row[0] for row in keypoint_classifier_labels
-            ]
+            keypoint_classifier_labels = [row[0] for row in keypoint_classifier_labels]
         hand_landmarks = landmarks
 
         # for hand_landmarks in landmarks:
         # Landmark calculation
-        landmark_list = self.calc_landmark_list(
-            image, hand_landmarks)
+        landmark_list = self.calc_landmark_list(image, hand_landmarks)
         # Conversion to relative coordinates / normalized coordinates
-        pre_processed_landmark_list = self.pre_process_landmark(
-            landmark_list)
+        pre_processed_landmark_list = self.pre_process_landmark(landmark_list)
         # Hand sign classification
-        hand_sign_id = keypoint_classifier(
-            pre_processed_landmark_list)
+        hand_sign_id = keypoint_classifier(pre_processed_landmark_list)
         # if hand_sign_id == 2 or hand_sign_id == 3:  # Point gesture
         for idx, landmark in enumerate(hand_landmarks.landmark):
             # Tip of pointer finger only
@@ -124,8 +122,13 @@ class HandThread(QThread):
                 continue
             cx, cy = landmark.x * self.cap_width, landmark.y * self.cap_height
             cx, cy = self.h.process_point(cx, cy)
-            self.wind_mouse(self.startx, self.starty, cx, cy,
-                            move_mouse=lambda x, y: self.coor_signal.emit((x, y)))
+            self.wind_mouse(
+                self.startx,
+                self.starty,
+                cx,
+                cy,
+                move_mouse=lambda x, y: self.coor_signal.emit((x, y)),
+            )
             self.startx, self.starty = cx, cy
         if hand_sign_id == 3:
             self.click_signal.emit(True)
@@ -136,42 +139,54 @@ class HandThread(QThread):
             hand_landmarks,
             mp_holistic.HAND_CONNECTIONS,
             mp_drawing_styles.get_default_hand_landmarks_style(),
-            mp_drawing_styles.get_default_hand_connections_style())
+            mp_drawing_styles.get_default_hand_connections_style(),
+        )
 
-    def wind_mouse(self, start_x, start_y, dest_x, dest_y, G_0=9, W_0=3, M_0=15, D_0=12, move_mouse=lambda x, y: None):
-        '''
+    def wind_mouse(
+        self,
+        start_x,
+        start_y,
+        dest_x,
+        dest_y,
+        G_0=9,
+        W_0=3,
+        M_0=15,
+        D_0=12,
+        move_mouse=lambda x, y: None,
+    ):
+        """
         WindMouse algorithm. Calls the move_mouse kwarg with each new step.
         Released under the terms of the GPLv3 license.
         G_0 - magnitude of the gravitational fornce
         W_0 - magnitude of the wind force fluctuations
         M_0 - maximum step size (velocity clip threshold)
         D_0 - distance where wind behavior changes from random to damped
-        '''
+        """
         sqrt3 = np.sqrt(3)
         sqrt5 = np.sqrt(5)
 
         current_x, current_y = start_x, start_y
         v_x = v_y = W_x = W_y = 0
-        dist = np.hypot(dest_x-start_x, dest_y-start_y)
+        dist = np.hypot(dest_x - start_x, dest_y - start_y)
         while dist >= 1:
             W_mag = min(W_0, dist)
             if dist >= D_0:
-                W_x = W_x/sqrt3 + (2*np.random.random()-1)*W_mag/sqrt5
-                W_y = W_y/sqrt3 + (2*np.random.random()-1)*W_mag/sqrt5
+                W_x = W_x / sqrt3 + (2 * np.random.random() - 1) * W_mag / sqrt5
+                W_y = W_y / sqrt3 + (2 * np.random.random() - 1) * W_mag / sqrt5
             else:
                 W_x /= sqrt3
                 W_y /= sqrt3
                 if M_0 < 3:
-                    M_0 = np.random.random()*3 + 3
+                    M_0 = np.random.random() * 3 + 3
                 else:
                     M_0 /= sqrt5
-            v_x += W_x + G_0*(dest_x-start_x)/dist
-            v_y += W_y + G_0*(dest_y-start_y)/dist
+            v_x += W_x + G_0 * (dest_x - start_x) / dist
+            v_y += W_y + G_0 * (dest_y - start_y) / dist
             v_mag = np.hypot(v_x, v_y)
             if v_mag > M_0:
-                v_clip = M_0/2 + np.random.random()*M_0/2
-                v_x = (v_x/v_mag) * v_clip
-                v_y = (v_y/v_mag) * v_clip
+                v_clip = M_0 / 2 + np.random.random() * M_0 / 2
+                v_x = (v_x / v_mag) * v_clip
+                v_y = (v_y / v_mag) * v_clip
             start_x += v_x
             start_y += v_y
             move_x = int(np.round(start_x))
@@ -181,7 +196,7 @@ class HandThread(QThread):
                 current_x = move_x
                 current_y = move_y
                 move_mouse(current_x, current_y)
-            dist = np.hypot(dest_x-start_x, dest_y-start_y)
+            dist = np.hypot(dest_x - start_x, dest_y - start_y)
         return current_x, current_y
 
     def calc_landmark_list(self, image, landmarks):
@@ -211,8 +226,7 @@ class HandThread(QThread):
             temp_landmark_list[index][1] = temp_landmark_list[index][1] - base_y
 
         # Convert to a one-dimensional list
-        temp_landmark_list = list(
-            itertools.chain.from_iterable(temp_landmark_list))
+        temp_landmark_list = list(itertools.chain.from_iterable(temp_landmark_list))
 
         # Normalization
         max_value = max(list(map(abs, temp_landmark_list)))

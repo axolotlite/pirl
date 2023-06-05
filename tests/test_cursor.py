@@ -1,9 +1,11 @@
 import sys, os
+
 sys.path.insert(0, os.path.abspath(__file__ + "/../../"))
 from fitz import fitz
 from PyQt5.QtCore import QRect
-from PyQt5.QtWidgets import (QApplication, QDesktopWidget)
+from PyQt5.QtWidgets import QApplication, QDesktopWidget
 import gui_prototype as gp
+
 
 def main():
     app = QApplication([])
@@ -22,5 +24,5 @@ def main():
     app.exec_()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

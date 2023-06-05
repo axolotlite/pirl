@@ -1,4 +1,5 @@
 from PyQt5 import QtWidgets, QtCore
+
 """
 inherits the Qlabel object to allow the addition of click, which triggers a callback function.
 """

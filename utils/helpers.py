@@ -3,8 +3,7 @@ import cv2 as cv
 
 
 class CvFps(object):
-    """Frame rate helper class
-    """
+    """Frame rate helper class"""
 
     def __init__(self, buffer_len=1):
         self._start_tick = cv.getTickCount()
@@ -24,8 +23,24 @@ class CvFps(object):
         return fps_rounded
 
     def draw(self, image, fps):
-        cv.putText(image, "FPS:" + str(fps), (10, 30), cv.FONT_HERSHEY_SIMPLEX,
-                   1.0, (0, 0, 0), 4, cv.LINE_AA)
-        cv.putText(image, "FPS:" + str(fps), (10, 30), cv.FONT_HERSHEY_SIMPLEX,
-                   1.0, (255, 255, 255), 2, cv.LINE_AA)
+        cv.putText(
+            image,
+            "FPS:" + str(fps),
+            (10, 30),
+            cv.FONT_HERSHEY_SIMPLEX,
+            1.0,
+            (0, 0, 0),
+            4,
+            cv.LINE_AA,
+        )
+        cv.putText(
+            image,
+            "FPS:" + str(fps),
+            (10, 30),
+            cv.FONT_HERSHEY_SIMPLEX,
+            1.0,
+            (255, 255, 255),
+            2,
+            cv.LINE_AA,
+        )
         return image

@@ -41,7 +41,7 @@ class App(QWidget):
         self.image_label = QLabel(self)
         self.image_label.resize(self.disply_width, self.display_height)
         # create a text label
-        self.textLabel = QLabel('Webcam')
+        self.textLabel = QLabel("Webcam")
 
         # create a vertical box layout and add the two labels
         vbox = QVBoxLayout()
@@ -79,9 +79,11 @@ class App(QWidget):
         h, w, ch = rgb_image.shape
         bytes_per_line = ch * w
         convert_to_Qt_format = QtGui.QImage(
-            rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
+            rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888
+        )
         p = convert_to_Qt_format.scaled(
-            self.disply_width, self.display_height, Qt.KeepAspectRatio)
+            self.disply_width, self.display_height, Qt.KeepAspectRatio
+        )
         return QPixmap.fromImage(p)
 
 

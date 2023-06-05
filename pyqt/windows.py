@@ -1,5 +1,6 @@
 import sys
 import os
+
 sys.path.insert(0, os.path.abspath(__file__ + "/../../"))
 from cfg import CFG
 from utils.cv_wrapper import convert_image
@@ -8,9 +9,32 @@ from fitz import fitz
 from PyQt5.QtMultimediaWidgets import QCameraViewfinder
 from PyQt5.QtMultimedia import QCamera, QCameraInfo, QCameraImageCapture
 from PyQt5.QtGui import QPixmap, QImage, QKeyEvent, QFont, QPainter, QColor, QPen
-from PyQt5.QtWidgets import (QApplication, QLabel, QMainWindow, QVBoxLayout,
-                             QPushButton, QHBoxLayout, QWidget, QDesktopWidget, QFileDialog, QStatusBar, QToolBar, QAction, QComboBox, QErrorMessage)
-from PyQt5.QtCore import Qt, QThread, QRect, pyqtSignal, pyqtSlot, QBuffer, QPoint, QTimer
+from PyQt5.QtWidgets import (
+    QApplication,
+    QLabel,
+    QMainWindow,
+    QVBoxLayout,
+    QPushButton,
+    QHBoxLayout,
+    QWidget,
+    QDesktopWidget,
+    QFileDialog,
+    QStatusBar,
+    QToolBar,
+    QAction,
+    QComboBox,
+    QErrorMessage,
+)
+from PyQt5.QtCore import (
+    Qt,
+    QThread,
+    QRect,
+    pyqtSignal,
+    pyqtSlot,
+    QBuffer,
+    QPoint,
+    QTimer,
+)
 import numpy as np
 import io
 
@@ -48,7 +72,12 @@ class VirtualCursor(QLabel):
         #     f"Self xmax = {self.global_x_max}, self ymax = {self.global_y_max}")
 
     def normalizeCoordinates(self, e):
-        if e[0] >= self.global_x_min and e[0] <= self.global_x_max and e[1] >= self.global_y_min and e[1] <= self.global_y_max:
+        if (
+            e[0] >= self.global_x_min
+            and e[0] <= self.global_x_max
+            and e[1] >= self.global_y_min
+            and e[1] <= self.global_y_max
+        ):
             e = (e[0] - self.global_x_min, e[1] - self.global_y_min)
             return True, e
         return False, e
@@ -159,7 +188,7 @@ class PDFWindow(QMainWindow):
 
     def get_pix_page(self, doc):
         page = doc[self.pno]
-        zoom = 2    # zoom factor
+        zoom = 2  # zoom factor
         mat = fitz.Matrix(zoom, zoom)
         pixmap_image = page.get_pixmap(matrix=mat)
         bytes = QImage.fromData(pixmap_image.tobytes())
@@ -170,8 +199,7 @@ class PDFWindow(QMainWindow):
     def making_canvas(self, pixmap):
         label = VirtualCursor()
         self.setMinimumSize(1000, 900)
-        self.pixmap = pixmap.scaled(
-            self.size(), aspectRatioMode=Qt.KeepAspectRatio)
+        self.pixmap = pixmap.scaled(self.size(), aspectRatioMode=Qt.KeepAspectRatio)
         label.setPixmap(self.pixmap)
         return label
 
@@ -179,15 +207,15 @@ class PDFWindow(QMainWindow):
         # When the window is resized, resize the pixmap to the new window size
         # print(F"resize pdf {self.mapToGlobal(QPoint(0,0))}")
         self.pixmap = self.pixmap.scaled(
-            self.size(), aspectRatioMode=Qt.KeepAspectRatio)
+            self.size(), aspectRatioMode=Qt.KeepAspectRatio
+        )
         self.label.setPixmap(self.pixmap)
 
     def write_next(self):
-
         image = self.temp_pix.toImage()
         buffer = QBuffer()
         buffer.open(QBuffer.ReadWrite)
-        image.save(buffer, 'PNG')  # Save the QImage as a PNG to the buffer
+        image.save(buffer, "PNG")  # Save the QImage as a PNG to the buffer
         image_bytes = buffer.data()
         file = io.BytesIO(image_bytes)
         new_doc = fitz.open(stream=file.read(), filetype="png")
@@ -195,19 +223,18 @@ class PDFWindow(QMainWindow):
         new_doc.close()
         copy = fitz.open("pdf", pdfBytes)
         page = self.edited_pdf.new_page(
-            self.pno - 1, self.doc[0].rect.width, self.doc[0].rect.height)
+            self.pno - 1, self.doc[0].rect.width, self.doc[0].rect.height
+        )
         page.show_pdf_page(self.doc[0].rect, copy, 0)
-        pages = list(p for p in range(
-            self.edited_pdf.page_count) if p != self.pno)
+        pages = list(p for p in range(self.edited_pdf.page_count) if p != self.pno)
         self.edited_pdf.select(pages)
         self.edited_pdf.save("see.pdf")
 
     def write_previous(self):
-
         image = self.temp_pix.toImage()
         buffer = QBuffer()
         buffer.open(QBuffer.ReadWrite)
-        image.save(buffer, 'PNG')  # Save the QImage as a PNG to the buffer
+        image.save(buffer, "PNG")  # Save the QImage as a PNG to the buffer
         image_bytes = buffer.data()
         file = io.BytesIO(image_bytes)
         new_doc = fitz.open(stream=file.read(), filetype="png")
@@ -215,10 +242,10 @@ class PDFWindow(QMainWindow):
         new_doc.close()
         copy = fitz.open("pdf", pdfBytes)
         page = self.edited_pdf.new_page(
-            self.pno + 1, self.doc[0].rect.width, self.doc[0].rect.height)
+            self.pno + 1, self.doc[0].rect.width, self.doc[0].rect.height
+        )
         page.show_pdf_page(self.doc[0].rect, copy, 0)
-        pages = list(p for p in range(
-            self.edited_pdf.page_count) if p != self.pno + 2)
+        pages = list(p for p in range(self.edited_pdf.page_count) if p != self.pno + 2)
         self.edited_pdf.select(pages)
         self.edited_pdf.save("see.pdf")
 
@@ -313,7 +340,7 @@ class HandWindow(QMainWindow):
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle('hand_window')
+        self.setWindowTitle("hand_window")
         self.resize(640, 480)  # default size
 
         # Set the central widget of the window to the image label
@@ -329,7 +356,8 @@ class HandWindow(QMainWindow):
     @pyqtSlot(np.ndarray)
     def update_image(self, cv_img):
         qt_img = convert_image(
-            cv_img, self.image.size().width(), self.image.size().height())
+            cv_img, self.image.size().width(), self.image.size().height()
+        )
         self.image.setPixmap(qt_img)
 
     def resizeEvent(self, event):
@@ -347,14 +375,12 @@ class HandWindow(QMainWindow):
 
 
 class CameraSelectWindow(QMainWindow):
-
     # constructor
     def __init__(self):
         super().__init__()
 
         # setting geometry
-        self.setGeometry(100, 100,
-                         800, 600)
+        self.setGeometry(100, 100, 800, 600)
 
         # setting style sheet
         self.setStyleSheet("background : lightgrey;")
@@ -381,8 +407,9 @@ class CameraSelectWindow(QMainWindow):
         self.camera_selector.setToolTipDuration(2500)
 
         # adding items to the combo box
-        self.camera_selector.addItems([camera.description()
-                                       for camera in self.available_cameras])
+        self.camera_selector.addItems(
+            [camera.description() for camera in self.available_cameras]
+        )
 
         # adding action to the combo box
         # calling the select camera method
@@ -410,7 +437,6 @@ class CameraSelectWindow(QMainWindow):
 
     # method to select camera
     def select_camera(self, i):
-
         # getting the selected camera
         self.camera = QCamera(self.available_cameras[i])
 
@@ -421,8 +447,7 @@ class CameraSelectWindow(QMainWindow):
         self.camera.setCaptureMode(QCamera.CaptureStillImage)
 
         # if any error occur show the alert
-        self.camera.error.connect(
-            lambda: self.alert(self.camera.errorString()))
+        self.camera.error.connect(lambda: self.alert(self.camera.errorString()))
 
         # start the camera
         self.camera.start()
@@ -431,13 +456,14 @@ class CameraSelectWindow(QMainWindow):
         self.capture = QCameraImageCapture(self.camera)
 
         # showing alert if error occur
-        self.capture.error.connect(lambda error_msg, error,
-                                   msg: self.alert(msg))
+        self.capture.error.connect(lambda error_msg, error, msg: self.alert(msg))
 
         # when image captured showing message
-        self.capture.imageCaptured.connect(lambda d,
-                                           i: self.status.showMessage("Image captured : "
-                                                                      + str(self.save_seq)))
+        self.capture.imageCaptured.connect(
+            lambda d, i: self.status.showMessage(
+                "Image captured : " + str(self.save_seq)
+            )
+        )
 
         # getting current camera name
         self.current_camera_name = self.available_cameras[i].description()
@@ -449,7 +475,6 @@ class CameraSelectWindow(QMainWindow):
 
     # method for alerts
     def alert(self, msg):
-
         # error message
         error = QErrorMessage(self)
 
@@ -458,7 +483,6 @@ class CameraSelectWindow(QMainWindow):
 
 
 class ScreenSelectWindow(QWidget):
-
     def __init__(self):
         super().__init__()
 

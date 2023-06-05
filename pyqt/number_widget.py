@@ -16,7 +16,8 @@ class NumberWidget(QWidget):
         widget_size = QSize(width, height)
 
         self.setWindowFlags(
-            Qt.Window | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+            Qt.Window | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+        )
         self.setAttribute(Qt.WA_TranslucentBackground)
 
         font = QFont("Arial", 100, QFont.Bold)
@@ -57,7 +58,7 @@ class NumberWidget(QWidget):
         self.move(qtRectangle.topLeft())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     widget = NumberWidget()
