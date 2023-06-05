@@ -53,8 +53,10 @@ class VirtualCursor(QLabel):
             self.global_y_min -= CFG.monitors[CFG.mainScreen].y
             self.global_x_max -= CFG.monitors[CFG.mainScreen].x
             self.global_y_max -= CFG.monitors[CFG.mainScreen].y
-        # print(f"Self xmin = {self.global_x_min}, self ymin = {self.global_y_min}")
-        # print(f"Self xmax = {self.global_x_max}, self ymax = {self.global_y_max}")
+        # print(
+        #     f"Self xmin = {self.global_x_min}, self ymin = {self.global_y_min}")
+        # print(
+        #     f"Self xmax = {self.global_x_max}, self ymax = {self.global_y_max}")
 
     def normalizeCoordinates(self, e):
         if e[0] >= self.global_x_min and e[0] <= self.global_x_max and e[1] >= self.global_y_min and e[1] <= self.global_y_max:
@@ -363,6 +365,9 @@ class MainWindow(QMainWindow):
         self.hand_window = HandWindow()
         self.hand_window.hide()
 
+        self.csw = CameraSelectWindow()
+        self.ssw = ScreenSelectWindow()
+
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignCenter)
 
@@ -476,11 +481,10 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(500, self.autocalibrator.start_calibration)
 
     def set_cam(self):
-        self.csw = CameraSelectWindow()
-        self.csw.show()
+        self.csw.start()
 
     def set_screen(self):
-        pass
+        self.ssw.show()
 
     # def keyboard_pressing(self):
     #     with Listener( on_press=self.on_press, on_release= None) as listener:
@@ -514,26 +518,8 @@ class CameraSelectWindow(QMainWindow):
             # exit the code
             sys.exit()
 
-        # creating a status bar
-        self.status = QStatusBar()
-
-        # setting style sheet to the status bar
-        self.status.setStyleSheet("background : white;")
-
-        # adding status bar to the main window
-        self.setStatusBar(self.status)
-
-        # path to save
-        self.save_path = ""
-
         # creating a QCameraViewfinder object
         self.viewfinder = QCameraViewfinder()
-
-        # showing this viewfinder
-        self.viewfinder.show()
-
-        # Set the default camera.
-        self.select_camera(CFG.camIdx)
 
         # creating a combo box for selecting camera
         self.camera_selector = QComboBox()
@@ -564,8 +550,13 @@ class CameraSelectWindow(QMainWindow):
 
         # setting window title
         self.setWindowTitle("PyQt5 Cam")
-
-        # showing the main window
+        
+    def start(self):
+        # showing this viewfinder
+        self.viewfinder.show()
+        # Set the default camera.
+        self.camera_selector.setCurrentIndex(CFG.camIdx)
+        self.select_camera(CFG.camIdx)
         self.show()
 
     # method to select camera
@@ -604,9 +595,9 @@ class CameraSelectWindow(QMainWindow):
 
         # initial save sequence
         self.save_seq = 0
-        
+
         CFG.camIdx = i
-        
+
     # method for alerts
     def alert(self, msg):
 
@@ -615,6 +606,55 @@ class CameraSelectWindow(QMainWindow):
 
         # setting text to the error message
         error.showMessage(msg)
+
+
+class ScreenSelectWindow(QWidget):
+
+    def __init__(self):
+        super().__init__()
+
+        self.screens = QApplication.instance().screens()
+
+        left_screen = QLabel()
+        right_screen = QLabel()
+
+        # Resize the screen captures so they fit inside the window.
+        left_screen.setScaledContents(True)
+        right_screen.setScaledContents(True)
+
+        left_screen.setPixmap(self.screens[0].grabWindow(0))
+
+        if len(self.screens) == 2:
+            right_screen.setPixmap(self.screens[1].grabWindow(0))
+        else:
+            right_screen.setText("No other monitor detected")
+
+        layout = QHBoxLayout()
+        layout.addWidget(left_screen)
+        layout.addWidget(right_screen)
+
+        self.setLayout(layout)
+
+        self.left_screen = left_screen
+        self.right_screen = right_screen
+
+        self.left_screen.mousePressEvent = self.on_left_screen_clicked
+        self.right_screen.mousePressEvent = self.on_right_screen_clicked
+
+        # Resize the window to a third of the size of the screen.
+        self.resize(self.screens[0].size() / 2)
+
+        # Resize the labels to fit the size of the window.
+        self.left_screen.setFixedSize(self.width() / 2, self.height())
+        self.right_screen.setFixedSize(self.width() / 2, self.height())
+
+    def on_left_screen_clicked(self, event):
+        CFG.mainScreen = 0
+        self.hide()
+
+    def on_right_screen_clicked(self, event):
+        CFG.mainScreen = 1
+        self.hide()
 
 
 def main():
