@@ -45,7 +45,11 @@ class MainWindow(QMainWindow):
         self.button.setFont(font_btn)
         self.button.clicked.connect(self.choose_file)
 
-        self.calibration_button = QPushButton("Calibrate")
+        self.new_pdf_button = QPushButton("Empty File")
+        self.new_pdf_button.setFont(font_btn)
+        self.new_pdf_button.clicked.connect(self.create_pdf)
+
+        self.calibration_button = QPushButton("Automatic Calibration")
         self.calibration_button.setFont(font_btn)
         self.calibration_button.clicked.connect(self.calibrate_screen)
 
@@ -53,9 +57,9 @@ class MainWindow(QMainWindow):
         self.result_button.setFont(font_btn)
         self.result_button.clicked.connect(self.show_results)
 
-        self.new_pdf_button = QPushButton("Empty File")
-        self.new_pdf_button.setFont(font_btn)
-        self.new_pdf_button.clicked.connect(self.create_pdf)
+        self.manual_button = QPushButton("Manual Calibration")
+        self.manual_button.setFont(font_btn)
+        self.manual_button.clicked.connect(self.manual_calibration)
 
         self.set_cam_button = QPushButton("Choose camera")
         self.set_cam_button.setFont(font_btn)
@@ -67,9 +71,10 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(title)
         layout.addWidget(self.button)
+        layout.addWidget(self.new_pdf_button)
         layout.addWidget(self.calibration_button)
         layout.addWidget(self.result_button)
-        layout.addWidget(self.new_pdf_button)
+        layout.addWidget(self.manual_button)
         layout.addWidget(self.set_cam_button)
         layout.addWidget(self.set_screen_button)
 
@@ -141,6 +146,10 @@ class MainWindow(QMainWindow):
     def calibrate_screen(self):
         self.autocalibrator.create_widget()
         QTimer.singleShot(500, self.autocalibrator.start_calibration)
+
+    def manual_calibration(self):
+        self.autocalibrator.fallback_calibration()
+        self.autocalibrator.set_points("manual")
 
     def set_cam(self):
         self.csw.start()

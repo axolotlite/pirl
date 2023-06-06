@@ -473,8 +473,6 @@ class CameraSelectWindow(QMainWindow):
         # initial save sequence
         self.save_seq = 0
 
-        CFG.camIdx = i
-
     # method for alerts
     def alert(self, msg):
         # error message
@@ -482,6 +480,11 @@ class CameraSelectWindow(QMainWindow):
 
         # setting text to the error message
         error.showMessage(msg)
+
+    def closeEvent(self, event):
+        del self.camera
+        CFG.camIdx = self.camera_selector.currentIndex()
+        event.accept()
 
 
 class ScreenSelectWindow(QWidget):
