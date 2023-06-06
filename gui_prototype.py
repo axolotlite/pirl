@@ -150,6 +150,9 @@ class MainWindow(QMainWindow):
     def manual_calibration(self):
         self.autocalibrator.fallback_calibration()
         self.autocalibrator.set_points("manual")
+        self.handw.set_homography_points(self.autocalibrator.default_points)
+        self.handw.begin()
+        self.handw.show()
 
     def set_cam(self):
         self.csw.start()
