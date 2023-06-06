@@ -141,10 +141,12 @@ class VirtualCursor(QLabel):
 
 
 class PDFWindow(QMainWindow):
-    def __init__(self, document):
+    def __init__(self):
         super().__init__()
         self.has_been_draw = False
         self.setWindowTitle("My App")
+
+    def set_doc(self, document):
         self.doc = document
         self.pno = 0
         self.edited_pdf = fitz.open(document)
@@ -158,9 +160,9 @@ class PDFWindow(QMainWindow):
         layout2.setAlignment(Qt.AlignCenter)
         self.layout.setContentsMargins(0, 0, 0, 0)
 
-        self.label = self.making_canvas(pixmap)
+        self.cursor = self.making_canvas(pixmap)
 
-        self.layout.addWidget(self.label)
+        self.layout.addWidget(self.cursor)
         next = QPushButton("next")
         next.clicked.connect(self.next)
         previous = QPushButton("previous")
@@ -176,15 +178,19 @@ class PDFWindow(QMainWindow):
         self.setCentralWidget(widget)
 
     def set_hand_thread(self, hand_thread):
-        print("let's gooo")
         self.hand_thread = hand_thread
 
+    def connect_hand_thread(self):
+        # here you pass just the first mouse move of the first page when we need to pass the mouseMove the page we are in since we always do another cursor when new page
+        self.hand_thread.coor_signal.connect(self.cursor.mouseMove)
+        self.hand_thread.click_signal.connect(self.cursor.mouseClick)
+
     def blank_page(self):
-        self.canvas = QPixmap(self.label.width(), self.label.height())
+        self.canvas = QPixmap(self.cursor.width(), self.cursor.height())
         self.canvas.fill(Qt.white)
-        self.label = self.making_canvas(self.canvas)
+        self.cursor = self.making_canvas(self.canvas)
         self.layout.takeAt(0)
-        self.layout.insertWidget(0, self.label)
+        self.layout.insertWidget(0, self.cursor)
 
     def get_pix_page(self, doc):
         page = doc[self.pno]
@@ -197,11 +203,11 @@ class PDFWindow(QMainWindow):
         return pixmap
 
     def making_canvas(self, pixmap):
-        label = VirtualCursor()
+        cursor = VirtualCursor()
         self.setMinimumSize(1000, 900)
         self.pixmap = pixmap.scaled(self.size(), aspectRatioMode=Qt.KeepAspectRatio)
-        label.setPixmap(self.pixmap)
-        return label
+        cursor.setPixmap(self.pixmap)
+        return cursor
 
     def resizeEvent(self, event):
         # When the window is resized, resize the pixmap to the new window size
@@ -209,7 +215,7 @@ class PDFWindow(QMainWindow):
         self.pixmap = self.pixmap.scaled(
             self.size(), aspectRatioMode=Qt.KeepAspectRatio
         )
-        self.label.setPixmap(self.pixmap)
+        self.cursor.setPixmap(self.pixmap)
 
     def write_next(self):
         image = self.temp_pix.toImage()
@@ -251,12 +257,12 @@ class PDFWindow(QMainWindow):
 
     def move(self, str):
         print("move")
-        self.label.mouseMoveEvent(str)
+        self.cursor.mouseMoveEvent(str)
         self.update()
         self.has_been_draw = True
 
     def paintEvent(self, e):
-        if self.label.pressed == True:
+        if self.cursor.pressed == True:
             self.has_been_draw = True
 
     def next(self):
@@ -264,14 +270,13 @@ class PDFWindow(QMainWindow):
             self.pno = 0
         else:
             self.pno += 1
-        if self.label.has_been_draw == True:
-            self.temp_pix = self.label.pixmap()
+        if self.cursor.has_been_draw == True:
+            self.temp_pix = self.cursor.pixmap()
             pix = self.get_pix_page(self.doc)
-            self.label = self.making_canvas(pix)
-            self.hand_thread.coor_signal.connect(self.label.mouseMove)
-            self.hand_thread.click_signal.connect(self.label.mouseClick)
+            self.cursor = self.making_canvas(pix)
+            self.connect_hand_thread()
             self.layout.takeAt(0)
-            self.layout.insertWidget(0, self.label)
+            self.layout.insertWidget(0, self.cursor)
 
             self.thread = MyThread(self, self.write_next)
             self.thread.started.connect(lambda: print("writing started!"))
@@ -281,25 +286,23 @@ class PDFWindow(QMainWindow):
             self.has_been_draw == False
         else:
             pix = self.get_pix_page(self.edited_pdf)
-            self.label = self.making_canvas(pix)
-            self.hand_thread.coor_signal.connect(self.label.mouseMove)
-            self.hand_thread.click_signal.connect(self.label.mouseClick)
+            self.cursor = self.making_canvas(pix)
+            self.connect_hand_thread()
             self.layout.takeAt(0)
-            self.layout.insertWidget(0, self.label)
+            self.layout.insertWidget(0, self.cursor)
 
     def previous(self):
         if self.pno == 0:
             self.pno = self.doc.__len__() - 1
         else:
             self.pno -= 1
-        if self.label.has_been_draw == True:
-            self.temp_pix = self.label.pixmap()
+        if self.cursor.has_been_draw == True:
+            self.temp_pix = self.cursor.pixmap()
             pix = self.get_pix_page(self.edited_pdf)
-            self.label = self.making_canvas(pix)
-            self.hand_thread.coor_signal.connect(self.label.mouseMove)
-            self.hand_thread.click_signal.connect(self.label.mouseClick)
+            self.cursor = self.making_canvas(pix)
+            self.connect_hand_thread()
             self.layout.takeAt(0)
-            self.layout.insertWidget(0, self.label)
+            self.layout.insertWidget(0, self.cursor)
 
             self.thread = MyThread(self, self.write_previous)
             self.thread.started.connect(lambda: print("writing started!"))
@@ -309,11 +312,10 @@ class PDFWindow(QMainWindow):
             self.has_been_draw == False
         else:
             pix = self.get_pix_page(self.edited_pdf)
-            self.label = self.making_canvas(pix)
-            self.hand_thread.coor_signal.connect(self.label.mouseMove)
-            self.hand_thread.click_signal.connect(self.label.mouseClick)
+            self.cursor = self.making_canvas(pix)
+            self.connect_hand_thread()
             self.layout.takeAt(0)
-            self.layout.insertWidget(0, self.label)
+            self.layout.insertWidget(0, self.cursor)
 
 
 class MyThread(QThread):
