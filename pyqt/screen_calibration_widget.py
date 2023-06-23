@@ -1,4 +1,8 @@
 # importing libraries
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(__file__ + "/../../"))
 from pyqt.number_widget import NumberWidget
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
@@ -7,9 +11,6 @@ from cfg import CFG
 import numpy as np
 from time import sleep
 import cv2
-import sys
-import os
-sys.path.append(os.path.abspath('.'))
 
 
 class CalibrationScreen(QWidget):
@@ -18,7 +19,7 @@ class CalibrationScreen(QWidget):
         # setting title
         self.setWindowTitle("Autocalibration screen")
         # opening window in maximized size
-        self.setStyleSheet('background-color: black;')
+        self.setStyleSheet("background-color: black;")
         # showing all the widgets
         self.calibration_screen = None
         # self.screen_count = QApplication.desktop().screenCount()
@@ -34,8 +35,10 @@ class CalibrationScreen(QWidget):
         self.showFullScreen()
 
     def select_screen(self):
-        widget = self.ButtonWidget(lambda: self.set_calibration_screen(
-            0), lambda: self.set_calibration_screen(1))
+        widget = self.ButtonWidget(
+            lambda: self.set_calibration_screen(0),
+            lambda: self.set_calibration_screen(1),
+        )
         widget.show()
         self.widgets.append(widget)
 
@@ -45,7 +48,7 @@ class CalibrationScreen(QWidget):
             widget.deleteLater()
 
     def set_color(self, color):
-        self.setStyleSheet(f'background-color: {color};')
+        self.setStyleSheet(f"background-color: {color};")
 
     def center(self, screen_number):
         qtRectangle = self.frameGeometry()
@@ -60,8 +63,8 @@ class CalibrationScreen(QWidget):
             super().__init__()
 
             # Create two buttons
-            self.button1 = QPushButton('screen 0', self)
-            self.button2 = QPushButton('screen 1', self)
+            self.button1 = QPushButton("screen 0", self)
+            self.button2 = QPushButton("screen 1", self)
             self.button1.clicked.connect(func1)
             self.button2.clicked.connect(func2)
             # Create a layout for the widget and add the buttons to it
@@ -76,16 +79,16 @@ class CalibrationScreen(QWidget):
 class ManualScreen(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.camIdx = CFG.camIdx
         self.screen = CFG.monitors[CFG.mainScreen]
         self.count = 0
         self.points = {"manual": []}
         self.breakflag = False
 
-        self.cap = cv2.VideoCapture(self.camIdx)
-        if(CFG.MJPG):
-            self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(
-                *"MJPG"))  # add this line
+        self.cap = cv2.VideoCapture(CFG.camIdx)
+        if CFG.MJPG:
+            self.cap.set(
+                cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")
+            )  # add this line
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, CFG.camWidth)
             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CFG.camHeight)
         self.cap_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -128,8 +131,7 @@ class ManualScreen(QMainWindow):
         self.count = 0
         self.points["manual"] = []
 
-        while (self.cap.isOpened()):
-
+        while self.cap.isOpened():
             success, frame = self.cap.read()
             if not success:
                 print("Ignoring empty camera frame.")
@@ -140,15 +142,26 @@ class ManualScreen(QMainWindow):
                 break
 
             for i in range(len(self.points["manual"])):
-                if (i + 1 == len(self.points["manual"])):
-                    cv2.line(frame, self.points["manual"][i],
-                             self.points["manual"][0], (187, 87, 231), 2)
+                if i + 1 == len(self.points["manual"]):
+                    cv2.line(
+                        frame,
+                        self.points["manual"][i],
+                        self.points["manual"][0],
+                        (187, 87, 231),
+                        2,
+                    )
                 else:
                     cv2.line(
-                        frame, self.points["manual"][i], self.points["manual"][i+1], (187, 87, 231), 2)
+                        frame,
+                        self.points["manual"][i],
+                        self.points["manual"][i + 1],
+                        (187, 87, 231),
+                        2,
+                    )
 
             pixmap = QPixmap.fromImage(
-                QImage(frame, frame.shape[1], frame.shape[0], QImage.Format_BGR888))
+                QImage(frame, frame.shape[1], frame.shape[0], QImage.Format_BGR888)
+            )
             self.label.setPixmap(pixmap)
 
             QApplication.processEvents()
@@ -181,5 +194,5 @@ def main():
     sys.exit(App.exec())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

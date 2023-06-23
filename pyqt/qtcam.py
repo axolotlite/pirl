@@ -41,7 +41,7 @@ class App(QWidget):
         self.image_label = QLabel(self)
         self.image_label.resize(self.disply_width, self.display_height)
         # create a text label
-        self.textLabel = QLabel('Webcam')
+        self.textLabel = QLabel("Webcam")
 
         # create a vertical box layout and add the two labels
         vbox = QVBoxLayout()
@@ -61,27 +61,33 @@ class App(QWidget):
         self.thread.stop()
         event.accept()
 
-
     def set_cap(self, cap):
         self.thread.cap = cap
+
     def start_video_thread(self):
         self.thread.start()
+
     @pyqtSlot(np.ndarray)
     def update_image(self, cv_img):
         """Updates the image_label with a new opencv image"""
         qt_img = self.convert_cv_qt(cv_img)
         self.image_label.setPixmap(qt_img)
-    
+
     def convert_cv_qt(self, cv_img):
         """Convert from an opencv image to QPixmap"""
         rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
         h, w, ch = rgb_image.shape
         bytes_per_line = ch * w
-        convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
-        p = convert_to_Qt_format.scaled(self.disply_width, self.display_height, Qt.KeepAspectRatio)
+        convert_to_Qt_format = QtGui.QImage(
+            rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888
+        )
+        p = convert_to_Qt_format.scaled(
+            self.disply_width, self.display_height, Qt.KeepAspectRatio
+        )
         return QPixmap.fromImage(p)
-    
-if __name__=="__main__":
+
+
+if __name__ == "__main__":
     app = QApplication(sys.argv)
     cap = cv2.VideoCapture(0)
     a = App(None)
