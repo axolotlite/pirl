@@ -523,8 +523,8 @@ class ScreenSelectWindow(QWidget):
         self.resize(self.screens[0].size() / 2)
 
         # Resize the labels to fit the size of the window.
-        self.left_screen.setFixedSize(self.width() / 2, self.height())
-        self.right_screen.setFixedSize(self.width() / 2, self.height())
+        self.left_screen.setFixedSize(self.width() // 2, self.height())
+        self.right_screen.setFixedSize(self.width() // 2, self.height())
 
     def on_left_screen_clicked(self, event):
         CFG.mainScreen = 0
