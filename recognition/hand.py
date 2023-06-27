@@ -47,6 +47,15 @@ class HandThread(QThread):
         self.cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.cap_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
+        if CFG.camSave:
+            fourcc = cv2.VideoWriter_fourcc(*"MP4V")
+            out = cv2.VideoWriter(
+                CFG.camSavePath,
+                fourcc,
+                20.0,
+                (int(self.cap_width), int(self.cap_height)),
+            )
+
         # FPS Measurement ########################################################
         cvFps = CvFps(buffer_len=10)
 
@@ -69,6 +78,9 @@ class HandThread(QThread):
                     # If loading a video, use 'break' instead of 'continue'.
                     continue
 
+                if CFG.camSave:
+                    out.write(image)
+
                 # To improve performance, optionally mark the image as not writeable to
                 # pass by reference.
                 image.flags.writeable = False
@@ -88,6 +100,8 @@ class HandThread(QThread):
                 image = cvFps.draw(image, fps)
                 self.change_pixmap_signal.emit(image)
         cap.release()
+        if CFG.camSave:
+            out.release()
 
     def stop(self):
         """Sets run flag to False and waits for thread to finish"""

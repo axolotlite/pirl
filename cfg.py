@@ -1,12 +1,16 @@
 from screeninfo import get_monitors
 
+
 class CFG:
     camIdx = 0
     camWidth = 1280
     camHeight = 720
     handThreadScreen = 0
     MJPG = True
-    
+
+    camSave = False
+    camSavePath = "cam.mp4"
+
     # 0 for primary, 1 for secondary
     mainScreen = 0
     monitors = get_monitors()
