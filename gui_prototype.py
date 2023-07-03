@@ -31,7 +31,6 @@ class MainWindow(QMainWindow):
         # self.csw = CameraSelectWindow()
         self.ssw = ScreenSelectWindow()
         self.classroomCompanion = ClassroomCompanion()
-
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignCenter)
         self.setFixedSize(800, 500)
@@ -202,6 +201,7 @@ def main():
     palette.setColor(QPalette.HighlightedText, Qt.black)
     app.setPalette(palette)
     window = MainWindow()
+    app.lastWindowClosed.connect(window.classroomCompanion.api.stop)
     window.show()
     app.exec_()
 

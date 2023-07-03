@@ -14,6 +14,7 @@ from pyqt.student_addition_screen import AdditionScreen
 import sys,os
 sys.path.insert(0, os.path.abspath(__file__ + "/../../"))
 from modules.api.db_handler import DBHandler
+from modules.api.pirl_api import APIWrapper
 from datetime import date
 class ClassroomCompanion(QtWidgets.QWidget):
     def __init__(self):
@@ -25,6 +26,8 @@ class ClassroomCompanion(QtWidgets.QWidget):
         self.add_student_screen = AdditionScreen()
         self.addition_layout = None
         self.student_header = StudentHeader()
+        self.api = APIWrapper()
+        self.api.start()
         self.setupUi()
 
     def setupUi(self):
@@ -112,7 +115,6 @@ class ClassroomCompanion(QtWidgets.QWidget):
                 return
             record_number = self.student_header.count
             print(record_number)
-            attendance_records = [False for i in range(record_number)]
             self.db_handler.add_student(student_id,student_name)
             for lesson_number in range(1,record_number + 1):
                 self.db_handler.add_attendance(student_id, class_id, lesson_number, False)
@@ -154,6 +156,7 @@ class ClassroomCompanion(QtWidgets.QWidget):
         recorded_days = self.db_handler.get_lessons(classId)
         self.student_header.setDays(count=len(recorded_days), data=recorded_days)
         self.student_header.className = className
+        self.student_header.classId = classId
     def addDay(self):
         today = date.today().strftime('%Y-%m-%d')
         self.db_handler.add_lesson(today,self.classId)

@@ -72,6 +72,7 @@ class StudentHeader():
             prev_button.clicked.connect(lambda: self.qr_screen.setData(
                     date = self.data_array[lastIndex - 1]["date"],
                     className = self.className,
+                    classId = self.classId,
                     lessonId = self.data_array[lastIndex - 1]["lesson_number"]
                 )
             )
