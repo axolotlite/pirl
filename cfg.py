@@ -12,7 +12,7 @@ class CFG:
     camSavePath = "cam.mp4"
 
     # 0 for primary, 1 for secondary
-    mainScreen = 0
+    mainScreen = 1
     monitors = get_monitors()
     # Make the primary monitor always have index 0
     if not monitors[0].is_primary:

@@ -60,45 +60,46 @@ class HandThread(QThread):
         cvFps = CvFps(buffer_len=10)
 
         with mp_holistic.Holistic(
-            min_detection_confidence=0.5,
+            min_detection_confidence=0.3,
             min_tracking_confidence=0.5,
             static_image_mode=False,
-            model_complexity=0,
+            model_complexity=2,
             smooth_landmarks=True,
             enable_segmentation=True,
             smooth_segmentation=True,
             refine_face_landmarks=False,
         ) as holistic:
-            while cap.isOpened() and self._run_flag:
-                fps = cvFps.get()
+            while cap.isOpened():
+                if self._run_flag:
+                    fps = cvFps.get()
 
-                success, image = cap.read()
-                if not success:
-                    print("Ignoring empty camera frame.")
-                    # If loading a video, use 'break' instead of 'continue'.
-                    continue
+                    success, image = cap.read()
+                    if not success:
+                        print("Ignoring empty camera frame.")
+                        # If loading a video, use 'break' instead of 'continue'.
+                        continue
 
-                if CFG.camSave:
-                    out.write(image)
+                    if CFG.camSave:
+                        out.write(image)
 
-                # To improve performance, optionally mark the image as not writeable to
-                # pass by reference.
-                image.flags.writeable = False
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                results = holistic.process(image)
-                # Draw the hand annotations on the image.
-                image.flags.writeable = True
-                image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+                    # To improve performance, optionally mark the image as not writeable to
+                    # pass by reference.
+                    image.flags.writeable = False
+                    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                    results = holistic.process(image)
+                    # Draw the hand annotations on the image.
+                    image.flags.writeable = True
+                    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-                if self.selected_hand == "right":
-                    hand_result = results.right_hand_landmarks
-                elif self.selected_hand == "left":
-                    hand_result = results.left_hand_landmarks
-                if hand_result:
-                    self.gesture_recognition(image, hand_result)
-                image = self.h.normalize_img(image)
-                image = cvFps.draw(image, fps)
-                self.change_pixmap_signal.emit(image)
+                    if self.selected_hand == "right":
+                        hand_result = results.right_hand_landmarks
+                    elif self.selected_hand == "left":
+                        hand_result = results.left_hand_landmarks
+                    if hand_result:
+                        self.gesture_recognition(image, hand_result)
+                    image = self.h.normalize_img(image)
+                    image = cvFps.draw(image, fps)
+                    self.change_pixmap_signal.emit(image)
         cap.release()
         if CFG.camSave:
             out.release()

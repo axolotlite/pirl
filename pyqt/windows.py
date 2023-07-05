@@ -6,14 +6,16 @@ from cfg import CFG
 from utils.cv_wrapper import convert_image
 from recognition.hand import HandThread
 from fitz import fitz
+from time import sleep
 from PyQt5.QtMultimediaWidgets import QCameraViewfinder
 from PyQt5.QtMultimedia import QCamera, QCameraInfo, QCameraImageCapture
-from PyQt5.QtGui import QPixmap, QImage, QKeyEvent, QFont, QPainter, QColor, QPen
+from PyQt5.QtGui import QPixmap, QImage, QKeyEvent, QFont, QPainter, QColor, QPen, QMouseEvent
 from PyQt5.QtWidgets import (
     QApplication,
     QLabel,
     QMainWindow,
     QVBoxLayout,
+    QStackedLayout,
     QPushButton,
     QHBoxLayout,
     QWidget,
@@ -40,10 +42,12 @@ import io
 
 
 class VirtualCursor(QLabel):
-    def __init__(self, parent=None):
+    def __init__(self,pixmap ,parent=None):
         super().__init__(parent)
-
+        print("virtual cusror has been initiated")
+        self.setPixmap(pixmap)
         self.pressed = False
+        self.setFixedSize(pixmap.size())
         self.x = 0
         self.y = 0
         self.has_been_draw = False
@@ -55,80 +59,96 @@ class VirtualCursor(QLabel):
         self.last_y = None
         self.global_x = self.mapToGlobal(QPoint(0, 0)).x()
 
-    def setCoordinates(self):
-        self.global_x_min = self.mapToGlobal(QPoint(0, 0)).x()
-        self.global_y_min = self.mapToGlobal(QPoint(0, 0)).y()
-        self.global_x_max = self.mapToGlobal(QPoint(self.width(), 0)).x()
-        self.global_y_max = self.mapToGlobal(QPoint(0, self.height())).y()
-        # Adjust coordinates if not primary screen
-        if CFG.mainScreen:
-            self.global_x_min -= CFG.monitors[CFG.mainScreen].x
-            self.global_y_min -= CFG.monitors[CFG.mainScreen].y
-            self.global_x_max -= CFG.monitors[CFG.mainScreen].x
-            self.global_y_max -= CFG.monitors[CFG.mainScreen].y
-        # print(
-        #     f"Self xmin = {self.global_x_min}, self ymin = {self.global_y_min}")
-        # print(
-        #     f"Self xmax = {self.global_x_max}, self ymax = {self.global_y_max}")
-
-    def normalizeCoordinates(self, e):
-        if (
-            e[0] >= self.global_x_min
-            and e[0] <= self.global_x_max
-            and e[1] >= self.global_y_min
-            and e[1] <= self.global_y_max
-        ):
-            e = (e[0] - self.global_x_min, e[1] - self.global_y_min)
-            return True, e
-        return False, e
-
-    # def moveEvent(self, event) -> None:
-    #     self.setCoordinates()
-    #     return super().moveEvent(event)
-
     def resizeEvent(self, event) -> None:
         # When the window is resized, resize the pixmap to the new window size
-        # print(f" resize label {self.mapToGlobal(QPoint(0,0))}")
-        self.setCoordinates()
+        print(f"in virtual mask size = {self.size()}")
+        print(f"in virtual mask  pixmap size = {self.pixmap().size()}")
         pixmap = self.pixmap().scaled(self.size(), aspectRatioMode=Qt.KeepAspectRatio)
         self.setPixmap(pixmap)
+        print(self.mapToGlobal(self.pos()))
 
+
+
+class DrawingMask(QLabel):
+    font_size = 5
+    font_color = 'black'
+    def __init__(self,virtual_cursor: VirtualCursor ,parent=None):
+        super().__init__(parent)
+        print("Drawing Mask has been initiated")
+        pixmap = QPixmap(virtual_cursor.pixmap().size())
+        pixmap.fill(Qt.transparent)
+        self.setPixmap(pixmap)
+        self.setStyleSheet("background-color: transparent;")
+        self.setFixedSize(pixmap.size())
+        self.pressed = False
+        self.x = 0
+        self.y = 0      
+        self.has_been_draw = False
+        self.setMouseTracking(True)
+        self.setCursor(Qt.BlankCursor)
+        self._position = QPoint(self.x,self.y)
+        self._opacity = 0.4
+        self.erase = False
+        self.last_x = None
+        self.last_y = None
+    
+    def resizeEvent(self, event):
+        # When the window is resized, resize the pixmap to the new window size
+        
+        print(f"in drawing mask size = {self.size()}")
+        print(f"in drawing mask  pixmap size = {self.pixmap().size()}")
+        pixmap = self.pixmap().scaled(self.size(), aspectRatioMode=Qt.KeepAspectRatio)
+        self.setPixmap(pixmap)
+        print(self.mapToGlobal(self.pos()))
+
+    
     def paintEvent(self, event):
         # Call the base class implementation to paint the background
         super().paintEvent(event)
+        # print(self.mapToGlobal(self.pos()))
+        # print("paint event !")
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        painter.setBrush(QColor(255, 255, 0, int(self._opacity * 255)))
-        painter.drawEllipse(self._position, 5, 5)
+        painter.setBrush(QColor(255,255,0,int(self._opacity * 255)))
+        painter.drawEllipse(self._position, self.font_size, self.font_size)
         painter.end()
+        
+
 
     @pyqtSlot(tuple)
     def mouseMove(self, e):
-        success, e = self.normalizeCoordinates(e)
-        if success:
-            self._position = QPoint(e[0], e[1])
-            # print(f"in move {self._position}")
-            # print(self.mapToGlobal(self._position))
-            # print(self.mapFromGlobal(self.mapToGlobal(self._position)))
-            if self.pressed == True:
-                self.has_been_draw = True
-                if self.last_x is None:  # First event.
-                    self.last_x = e[0]
-                    self.last_y = e[1]
+        # print("moving")
+        # success, e = self.normalizeCoordinates(e)
+        self._position = self.mapFromParent(QPoint(e[0], e[1]))
+        e = (self._position.x(), self._position.y())
 
-                painter = QPainter(self.pixmap())
-                pen = QPen()
-                pen.setWidth(5)
-                pen.setCapStyle(Qt.RoundCap)
-                painter.setPen(pen)
-                painter.setRenderHint(QPainter.Antialiasing)
-                painter.drawLine(self.last_x, self.last_y, e[0], e[1])
-                painter.end()
-                self.update()
-
+        # print(f"in move {self._position}")
+        # print(self.mapToGlobal(self._position))
+        # print(self.mapFromGlobal(self.mapToGlobal(self._position)))
+        if self.pressed == True:
+            self.has_been_draw = True
+            if self.last_x is None:  # First event.
                 self.last_x = e[0]
                 self.last_y = e[1]
+
+            painter = QPainter(self.pixmap())
+            pen = QPen()
+            if self.font_color == 'transparent':
+                pen.setBrush(QColor(Qt.transparent))
+                painter.setCompositionMode(QPainter.CompositionMode_Source)
+            else:
+                pen.setBrush(QColor(self.font_color))
+            pen.setWidth(self.font_size)
+            pen.setCapStyle(Qt.RoundCap)
+            painter.setPen(pen)
+            painter.setRenderHint(QPainter.Antialiasing)
+            painter.drawLine(self.last_x, self.last_y, e[0], e[1])
+            painter.end()
             self.update()
+
+            self.last_x = e[0]
+            self.last_y = e[1]
+        self.update()
 
     @pyqtSlot(bool)
     def mouseClick(self, clicked):
@@ -139,183 +159,330 @@ class VirtualCursor(QLabel):
             self.last_x = None
             self.last_y = None
 
+        
 
+
+class Label(QLabel):
+    def __init__(self,virtual: DrawingMask ,widgets: list[QPushButton],parent=None):
+        super().__init__(parent)
+        self.widgets_list =  widgets # so we can know all places of all widgets
+        self.vir = virtual
+        self.x = 0
+        self.y = 0      
+        self.has_been_draw = False
+        self.setMouseTracking(True)
+        self.setCursor(Qt.BlankCursor)
+        self._position = QPoint(self.x,self.y)
+        self.outside = True
+        self.pressed = False
+    def paintEvent(self, event):
+        # Call the base class implementation to paint the background
+        super().paintEvent(event)
+        # print(self.mapToGlobal(self.pos()))
+
+        if self.outside:
+            
+            painter = QPainter(self)
+            painter.setRenderHint(QPainter.Antialiasing)
+            
+            painter.setBrush(QColor(255,0,0,int(0.5* 255)))
+            painter.drawEllipse(self._position, 5, 5)
+            painter.end()
+        
+    def mouseClick(self, clicked):
+        if clicked:
+            self.pressed = True
+        else:
+            self.pressed = False
+
+
+    def mouseMove(self, e : tuple):
+        clicked = False
+        # print(f"{self.mapToGlobal(e.pos())} pointer")
+        if(( e[0] <= self.vir.mapToParent(QPoint(0,0)).x() + self.vir.width()  ) and ( e[1] <= self.vir.mapToParent(QPoint(0,0)).y() + self.vir.height())) and (( e[0] >= self.vir.mapToParent(QPoint(0,0)).x()   ) and ( e[1] >= self.vir.mapToParent(QPoint(0,0)).y() )):
+            self.outside = False
+            self.vir.mouseClick(self.pressed)
+            self.vir.mouseMove(e) 
+        else:
+            
+            self.outside = True
+            for widget in self.widgets_list:
+                if(( e[0] <= widget.mapToParent(QPoint(0,0)).x() + widget.width()  ) and ( e[1] <= widget.mapToParent(QPoint(0,0)).y() + widget.height())) and (( e[0] >= widget.mapToParent(QPoint(0,0)).x()   ) and ( e[1] >= widget.mapToParent(QPoint(0,0)).y() )):
+                    # print("True")
+                    
+                    if self.pressed:
+                        
+                        self.pressed = False
+                        widget.click()
+                        self.stop_hand_thread()
+                        clicked = True
+                        sleep(0.4)
+                        self.start_hand_thread()
+                        
+            
+        self._position = QPoint(e[0], e[1]) if clicked == False else QPoint(0,0)
+        
+        self.update()
+       
+
+    def changeVir(self, new_vir):
+        self.vir = new_vir
+    def set_hand_thread(self, hand_thread: HandThread):
+        self.hand_thread = hand_thread
+
+    def stop_hand_thread(self):
+        self.hand_thread._run_flag = False
+    def start_hand_thread(self):
+        self.hand_thread._run_flag = True
+        
+class Page():
+    def __init__(self,mask: DrawingMask, page_no: int ,blank = False,parent=None):
+        self.mask = mask
+        self.page_no = page_no
+            
 class PDFWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.has_been_draw = False
         self.setWindowTitle("My App")
+        
 
     def set_doc(self, document):
+        self.container = QWidget()
+        stack = QStackedLayout()
+        stack.setStackingMode(QStackedLayout.StackAll)
+        self.stack_drawing = QStackedLayout()
+        self.stack_drawing.setStackingMode(QStackedLayout.StackAll)
+        
         self.doc = document
+        
         self.pno = 0
+        self.page_label_no = QLabel(f"page : {self.pno + 1} of {document.__len__()}")
+        self.page_label_no.setFont(QFont('Arial', 15))
+
         self.edited_pdf = fitz.open(document)
-
-        pixmap = self.get_pix_page(self.doc)
-
-        self.layout = QVBoxLayout()
-        self.layout.setSpacing(10)
-        self.layout.setAlignment(Qt.AlignCenter)
-        layout2 = QHBoxLayout()
+        self.blank = False
+        self.setMouseTracking(True)
+        self.setCursor(Qt.BlankCursor)
+        self.pixmap = self.get_pix_page(self.doc)
+        self.main_layout = QHBoxLayout()
+        self.container.setLayout(self.main_layout)
+        self.main_layout.setSpacing(10)
+        self.main_layout.setAlignment(Qt.AlignCenter)
+        layout2 = QVBoxLayout()
         layout2.setAlignment(Qt.AlignCenter)
-        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setContentsMargins(5,5,5,5)
+        
+        layout3 = QVBoxLayout()
+        layout3.setAlignment(Qt.AlignCenter)
+        
+        
+        self.label = self.making_canvas()
+        self.drawing_mask = DrawingMask(self.label)
 
-        self.cursor = self.making_canvas(pixmap)
-
-        self.layout.addWidget(self.cursor)
+        # self.label.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.font_size_label = QLabel(f"font size : {self.drawing_mask.font_size}")
+        self.font_size_label.setFont(QFont('Arial', 15))
+        self.font_color_label = QLabel(f"current color : {self.drawing_mask.font_color}")
+        self.font_color_label.setFont(QFont('Arial', 15))
+        increase_font = QPushButton("increase font")
+        decrease_font = QPushButton("decrease font")
+        increase_font.clicked.connect(self.increase_font)
+        decrease_font.clicked.connect(self.decrease_font)
+        
+        
+        layout3.addWidget(self.font_size_label)
+        layout3.addWidget(increase_font)
+        layout3.addWidget(decrease_font)
+        layout3.addWidget(self.font_color_label)
         next = QPushButton("next")
         next.clicked.connect(self.next)
         previous = QPushButton("previous")
         previous.clicked.connect(self.previous)
         blank = QPushButton("blank")
         blank.clicked.connect(self.blank_page)
+        layout2.addWidget(self.page_label_no)
         layout2.addWidget(next)
         layout2.addWidget(previous)
         layout2.addWidget(blank)
-        self.layout.addLayout(layout2)
+        self.widgets = []
+        color_layout = self.color_layout()
+        layout3.addLayout(color_layout)
+        self.widgets.append(next)
+        self.widgets.append(previous)
+        self.widgets.append(blank)
+        self.widgets.append(increase_font)
+        self.widgets.append(decrease_font)
+        self.main_layout.addLayout(layout2)
+        self.main_layout.addLayout(self.stack_drawing)
+        self.main_layout.addLayout(layout3)
         widget = QWidget()
-        widget.setLayout(self.layout)
+        self.biggest_label = Label(self.drawing_mask, self.widgets)
+
+        self.biggest_label.setStyleSheet("background-color: transparent;")
+        stack.addWidget(self.container)
+        stack.addWidget(self.biggest_label)
+        widget.setLayout(stack)
         self.setCentralWidget(widget)
+        self.stack_drawing.addWidget(self.drawing_mask)
+        self.stack_drawing.addWidget(self.label)
+        self.pages = [Page(self.drawing_mask, 0)]
+        
 
     def set_hand_thread(self, hand_thread):
         self.hand_thread = hand_thread
+        self.biggest_label.set_hand_thread(hand_thread)
 
     def connect_hand_thread(self):
         # here you pass just the first mouse move of the first page when we need to pass the mouseMove the page we are in since we always do another cursor when new page
-        self.hand_thread.coor_signal.connect(self.cursor.mouseMove)
-        self.hand_thread.click_signal.connect(self.cursor.mouseClick)
+        self.hand_thread.coor_signal.connect(self.biggest_label.mouseMove)
+        self.hand_thread.click_signal.connect(self.biggest_label.mouseClick)
+        
+    def increase_font(self, e):
+        self.drawing_mask.font_size += 3 
+        self.font_size_label.setText(f"font size : {self.drawing_mask.font_size}")
+    def decrease_font(self, e):
+        if self.drawing_mask.font_size > 2:
+            self.drawing_mask.font_size -= 3 
+        self.font_size_label.setText(f"font size : {self.drawing_mask.font_size}")
+        
+    
+    def color_layout(self):
+        vbox = QVBoxLayout()
+        vbox.setAlignment(Qt.AlignCenter)
+        hboxes = [QHBoxLayout(),QHBoxLayout(),QHBoxLayout(),QHBoxLayout(),QHBoxLayout(),QHBoxLayout(),QHBoxLayout()]
+        colors = ['red','darkRed','green', 'darkGreen','yellow','orange','blue','darkBlue','black','white','cyan','darkCyan','magenta','darkMagenta']
+        funcs = [self.color_red,self.color_darkRed,self.color_green,self.color_darkGreen,
+                 self.color_yellow,self.color_orange,
+                 self.color_blue,self.color_darkBlue,self.color_black,self.color_white,self.color_cyan,
+                 self.color_darkCyan,self.color_magenta,self.color_darkMagenta]
+        color = 0
+        for hbox in hboxes:
+            vbox.addLayout(hbox)
+            button = QPushButton(colors[color])
+            button.setStyleSheet(f"background-color: {colors[color]}; color: {colors[color]};")
+            button.clicked.connect(funcs[color])
+            hbox.addWidget(button)
+            self.widgets.append(button)
+            color += 1
+            button = QPushButton(colors[color])
+            button.setStyleSheet(f"background-color: {colors[color]}; color: {colors[color]};")
+            button.clicked.connect(funcs[color])
+            hbox.addWidget(button)
+            self.widgets.append(button)
+            color += 1
+        
+                    
+        button = QPushButton("Eraser")
+        button.clicked.connect(self.erase)
+        self.widgets.append(button)
+        vbox.addWidget(button)
+            
+        return vbox
+    
+    def erase(self):
+        self.drawing_mask.font_color = "transparent"
+    def color_red(self):
+        self.drawing_mask.font_color = "red"
+    def color_darkRed(self):
+        self.drawing_mask.font_color = "darkRed"
+    def color_blue(self):
+        self.drawing_mask.font_color = "blue"
+    def color_darkBlue(self):
+        self.drawing_mask.font_color = "darkBlue"
+    def color_green(self):
+        self.drawing_mask.font_color = "green"
+    def color_darkGreen(self):
+        self.drawing_mask.font_color = "darkGreen"
+    def color_white(self):
+        self.drawing_mask.font_color = "white"
+    def color_black(self):
+        self.drawing_mask.font_color = "black"
+    def color_cyan(self):
+        self.drawing_mask.font_color = "cyan"
+    def color_darkCyan(self):
+        self.drawing_mask.font_color = "darkCyan"
+    def color_magenta(self):
+        self.drawing_mask.font_color = "magenta"
+    def color_darkMagenta(self):
+        self.drawing_mask.font_color = "darkMagenta"
+    def color_yellow(self):
+        self.drawing_mask.font_color = "yellow"
+    def color_orange(self):
+        self.drawing_mask.font_color = "orange"
 
+    
+        
+    def save_page(self):
+        if self.pno < self.pages.__len__():
+            self.pages[self.pno].mask = self.drawing_mask
+        else:
+            self.pages.append(Page(self.drawing_mask,self.pno))
+        
+    def next(self,e):
+        self.save_page()
+        self.stack_drawing.removeWidget(self.label)
+        self.stack_drawing.removeWidget(self.drawing_mask)
+        self.pno += 1
+
+            
+        self.pixmap = self.get_pix_page(self.doc)
+        self.label = self.making_canvas()
+        if self.pno < self.pages.__len__():
+            self.drawing_mask = self.pages[self.pno].mask
+        else:
+            self.drawing_mask = DrawingMask(self.label)
+        self.biggest_label.changeVir(self.drawing_mask)
+        self.stack_drawing.addWidget(self.drawing_mask)
+        self.stack_drawing.addWidget(self.label)
+        
+        
+    def previous(self,e):
+        self.save_page()
+        self.stack_drawing.removeWidget(self.label)
+        self.stack_drawing.removeWidget(self.drawing_mask)
+        self.pno -= 1
+
+            
+        self.pixmap = self.get_pix_page(self.doc)
+        self.label = self.making_canvas()
+        if self.pno < self.pages.__len__():
+            self.drawing_mask = self.pages[self.pno].mask
+        else:
+            self.drawing_mask = DrawingMask(self.label)
+        self.biggest_label.changeVir(self.drawing_mask)
+        self.stack_drawing.addWidget(self.drawing_mask)
+        self.stack_drawing.addWidget(self.label)
+        
+        
     def blank_page(self):
-        self.canvas = QPixmap(self.cursor.width(), self.cursor.height())
-        self.canvas.fill(Qt.white)
-        self.cursor = self.making_canvas(self.canvas)
-        self.layout.takeAt(0)
-        self.layout.insertWidget(0, self.cursor)
-
-    def get_pix_page(self, doc):
+        self.save_page()
+        self.stack_drawing.removeWidget(self.label)
+        self.stack_drawing.removeWidget(self.drawing_mask)
+        self.pno += 1      
+        canvas = QPixmap(self.label.width(), self.label.height())
+        canvas.fill(Qt.white)
+        self.label = VirtualCursor(canvas)
+        self.drawing_mask = DrawingMask(self.label)
+        self.biggest_label.changeVir(self.drawing_mask)
+        self.stack_drawing.addWidget(self.drawing_mask)
+        self.stack_drawing.addWidget(self.label)
+        
+        
+    def get_pix_page(self,doc):
         page = doc[self.pno]
-        zoom = 2  # zoom factor
+        zoom = 2   # zoom factor
         mat = fitz.Matrix(zoom, zoom)
-        pixmap_image = page.get_pixmap(matrix=mat)
+        pixmap_image = page.get_pixmap(matrix = mat)
         bytes = QImage.fromData(pixmap_image.tobytes())
-        pixmap = QPixmap.fromImage(bytes)
-
+        pixmap = QPixmap.fromImage(bytes) 
         return pixmap
-
-    def making_canvas(self, pixmap):
-        cursor = VirtualCursor()
-        self.setMinimumSize(1000, 900)
-        self.pixmap = pixmap.scaled(self.size(), aspectRatioMode=Qt.KeepAspectRatio)
-        cursor.setPixmap(self.pixmap)
-        return cursor
-
-    def resizeEvent(self, event):
-        # When the window is resized, resize the pixmap to the new window size
-        # print(F"resize pdf {self.mapToGlobal(QPoint(0,0))}")
-        self.pixmap = self.pixmap.scaled(
-            self.size(), aspectRatioMode=Qt.KeepAspectRatio
-        )
-        self.cursor.setPixmap(self.pixmap)
-
-    def write_next(self):
-        image = self.temp_pix.toImage()
-        buffer = QBuffer()
-        buffer.open(QBuffer.ReadWrite)
-        image.save(buffer, "PNG")  # Save the QImage as a PNG to the buffer
-        image_bytes = buffer.data()
-        file = io.BytesIO(image_bytes)
-        new_doc = fitz.open(stream=file.read(), filetype="png")
-        pdfBytes = new_doc.convert_to_pdf()
-        new_doc.close()
-        copy = fitz.open("pdf", pdfBytes)
-        page = self.edited_pdf.new_page(
-            self.pno - 1, self.doc[0].rect.width, self.doc[0].rect.height
-        )
-        page.show_pdf_page(self.doc[0].rect, copy, 0)
-        pages = list(p for p in range(self.edited_pdf.page_count) if p != self.pno)
-        self.edited_pdf.select(pages)
-        self.edited_pdf.save("see.pdf")
-
-    def write_previous(self):
-        image = self.temp_pix.toImage()
-        buffer = QBuffer()
-        buffer.open(QBuffer.ReadWrite)
-        image.save(buffer, "PNG")  # Save the QImage as a PNG to the buffer
-        image_bytes = buffer.data()
-        file = io.BytesIO(image_bytes)
-        new_doc = fitz.open(stream=file.read(), filetype="png")
-        pdfBytes = new_doc.convert_to_pdf()
-        new_doc.close()
-        copy = fitz.open("pdf", pdfBytes)
-        page = self.edited_pdf.new_page(
-            self.pno + 1, self.doc[0].rect.width, self.doc[0].rect.height
-        )
-        page.show_pdf_page(self.doc[0].rect, copy, 0)
-        pages = list(p for p in range(self.edited_pdf.page_count) if p != self.pno + 2)
-        self.edited_pdf.select(pages)
-        self.edited_pdf.save("see.pdf")
-
-    def move(self, str):
-        print("move")
-        self.cursor.mouseMoveEvent(str)
-        self.update()
-        self.has_been_draw = True
-
-    def paintEvent(self, e):
-        if self.cursor.pressed == True:
-            self.has_been_draw = True
-
-    def next(self):
-        if self.pno == self.doc.__len__() - 1:
-            self.pno = 0
-        else:
-            self.pno += 1
-        if self.cursor.has_been_draw == True:
-            self.temp_pix = self.cursor.pixmap()
-            pix = self.get_pix_page(self.doc)
-            self.cursor = self.making_canvas(pix)
-            self.connect_hand_thread()
-            self.layout.takeAt(0)
-            self.layout.insertWidget(0, self.cursor)
-
-            self.thread = MyThread(self, self.write_next)
-            self.thread.started.connect(lambda: print("writing started!"))
-            self.thread.finished.connect(lambda: print("writing finished!"))
-            self.thread.start()
-
-            self.has_been_draw == False
-        else:
-            pix = self.get_pix_page(self.edited_pdf)
-            self.cursor = self.making_canvas(pix)
-            self.connect_hand_thread()
-            self.layout.takeAt(0)
-            self.layout.insertWidget(0, self.cursor)
-
-    def previous(self):
-        if self.pno == 0:
-            self.pno = self.doc.__len__() - 1
-        else:
-            self.pno -= 1
-        if self.cursor.has_been_draw == True:
-            self.temp_pix = self.cursor.pixmap()
-            pix = self.get_pix_page(self.edited_pdf)
-            self.cursor = self.making_canvas(pix)
-            self.connect_hand_thread()
-            self.layout.takeAt(0)
-            self.layout.insertWidget(0, self.cursor)
-
-            self.thread = MyThread(self, self.write_previous)
-            self.thread.started.connect(lambda: print("writing started!"))
-            self.thread.finished.connect(lambda: print("writing finished!"))
-            self.thread.start()
-
-            self.has_been_draw == False
-        else:
-            pix = self.get_pix_page(self.edited_pdf)
-            self.cursor = self.making_canvas(pix)
-            self.connect_hand_thread()
-            self.layout.takeAt(0)
-            self.layout.insertWidget(0, self.cursor)
+    
+    def making_canvas(self):
+        label = VirtualCursor(self.pixmap)
+        self.setMinimumSize(label.size())
+        return label
+        
 
 
 class MyThread(QThread):
