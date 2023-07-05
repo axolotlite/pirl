@@ -546,28 +546,31 @@ class HandWindow(QMainWindow):
 class CameraSelectWindow(QMainWindow):
     # constructor
     def __init__(self):
+        print("1")
         super().__init__()
-
+        print("2")
         # setting geometry
         self.setGeometry(100, 100, 800, 600)
 
         # setting style sheet
         self.setStyleSheet("background : lightgrey;")
-
+        print("3")
         # getting available cameras
         self.available_cameras = QCameraInfo.availableCameras()
-
+        print(self.available_cameras)
+        print("4")
         # if no camera found
         if not self.available_cameras:
             # exit the code
+            print("no camera detected, exiting...")
             sys.exit()
-
+        print("5")
         # creating a QCameraViewfinder object
         self.viewfinder = QCameraViewfinder()
-
+        print("6")
         # creating a combo box for selecting camera
         self.camera_selector = QComboBox()
-
+        print("7")
         # adding status tip to it
         self.camera_selector.setStatusTip("Choose desired camera")
 

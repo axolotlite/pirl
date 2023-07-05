@@ -15,6 +15,7 @@ from fitz import fitz
 
 from pyqt.select_window import Ui_Form
 from pyqt.windows import HandWindow, CameraSelectWindow, ScreenSelectWindow, PDFWindow
+from pyqt.classroom_window import ClassroomCompanion
 from utils.autocalibrate import Autocalibration
 from utils.cv_wrapper import convert_image
 
@@ -24,13 +25,12 @@ from cfg import CFG
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-
         self.autocalibrator = Autocalibration()
         self.pdfw = PDFWindow()
         self.handw = HandWindow()
-        self.csw = CameraSelectWindow()
+        # self.csw = CameraSelectWindow()
         self.ssw = ScreenSelectWindow()
-
+        self.classroomCompanion = ClassroomCompanion()
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignCenter)
         self.setFixedSize(800, 500)
@@ -56,7 +56,6 @@ class MainWindow(QMainWindow):
         self.result_button = QPushButton("Calibration Result")
         self.result_button.setFont(font_btn)
         self.result_button.clicked.connect(self.show_results)
-
         self.manual_button = QPushButton("Manual Calibration")
         self.manual_button.setFont(font_btn)
         self.manual_button.clicked.connect(self.manual_calibration)
@@ -69,6 +68,12 @@ class MainWindow(QMainWindow):
         self.set_screen_button.setFont(font_btn)
         self.set_screen_button.clicked.connect(self.set_screen)
 
+        self.classroom_companion_button = QPushButton("Classroom Companion")
+        self.classroom_companion_button.setFont(font_btn)
+        self.classroom_companion_button.clicked.connect(self.classroomCompanion.show)
+
+        # self.classroomCompanion
+
         layout.addWidget(title)
         layout.addWidget(self.button)
         layout.addWidget(self.new_pdf_button)
@@ -77,7 +82,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.manual_button)
         layout.addWidget(self.set_cam_button)
         layout.addWidget(self.set_screen_button)
-
+        layout.addWidget(self.classroom_companion_button)
         widget = QWidget()
         widget.setLayout(layout)
         self.setCentralWidget(widget)
@@ -178,14 +183,15 @@ def main():
     # autocalibrator = Autocalibration()
     app = QApplication([])
     # Force the style to be the same on all OSs:
-
-
+    # app.setStyle("Fusion")
     # Now use a palette to switch to dark colors:
 
     window = MainWindow()
+    app.lastWindowClosed.connect(window.classroomCompanion.api.stop)
     window.show()
     app.exec_()
 
 
 if __name__ == "__main__":
     main()
+    # print("hello")
