@@ -43,7 +43,7 @@ class QRScreen(QtWidgets.QWidget):
     def showQRCode(self):
         self.date = self.date_textbox.text()
         print(self.date, self.className, self.lessonId)
-        image = QrHandler.generate_qr_endpoint(prefix=str("192.168.1"),classId=self.classId,className=self.className,lessonId=self.lessonId)
+        image = QrHandler.generate_qr_endpoint(prefix=str("172.20.10"),classId=self.classId,className=self.className,lessonId=self.lessonId)
         image = convert_image(image)
         self.qrcode_image.setPixmap(image)
     def setData(self, date, classId, className, lessonId):

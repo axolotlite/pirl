@@ -28,7 +28,7 @@ class MainWindow(QMainWindow):
         self.autocalibrator = Autocalibration()
         self.pdfw = PDFWindow()
         self.handw = HandWindow()
-        # self.csw = CameraSelectWindow()
+        self.csw = CameraSelectWindow()
         self.ssw = ScreenSelectWindow()
         self.classroomCompanion = ClassroomCompanion()
         layout = QVBoxLayout()
@@ -102,7 +102,7 @@ class MainWindow(QMainWindow):
             screen = QDesktopWidget().screenGeometry(CFG.mainScreen)
             self.pdfw.setGeometry(QRect(screen))
             self.pdfw.showFullScreen()
-            self.hide()
+            
 
     def create_pdf(self):
         doc = fitz.open()

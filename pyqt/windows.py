@@ -382,34 +382,49 @@ class PDFWindow(QMainWindow):
     
     def erase(self):
         self.drawing_mask.font_color = "transparent"
+        self.font_color_label.setText(f"current color : Eraser")
     def color_red(self):
         self.drawing_mask.font_color = "red"
+        self.font_color_label.setText(f"current color : {self.drawing_mask.font_color}")
     def color_darkRed(self):
         self.drawing_mask.font_color = "darkRed"
+        self.font_color_label.setText(f"current color : {self.drawing_mask.font_color}")
     def color_blue(self):
         self.drawing_mask.font_color = "blue"
+        self.font_color_label.setText(f"current color : {self.drawing_mask.font_color}")
     def color_darkBlue(self):
         self.drawing_mask.font_color = "darkBlue"
+        self.font_color_label.setText(f"current color : {self.drawing_mask.font_color}")
     def color_green(self):
         self.drawing_mask.font_color = "green"
+        self.font_color_label.setText(f"current color : {self.drawing_mask.font_color}")
     def color_darkGreen(self):
         self.drawing_mask.font_color = "darkGreen"
+        self.font_color_label.setText(f"current color : {self.drawing_mask.font_color}")
     def color_white(self):
         self.drawing_mask.font_color = "white"
+        self.font_color_label.setText(f"current color : {self.drawing_mask.font_color}")
     def color_black(self):
         self.drawing_mask.font_color = "black"
+        self.font_color_label.setText(f"current color : {self.drawing_mask.font_color}")
     def color_cyan(self):
         self.drawing_mask.font_color = "cyan"
+        self.font_color_label.setText(f"current color : {self.drawing_mask.font_color}")
     def color_darkCyan(self):
         self.drawing_mask.font_color = "darkCyan"
+        self.font_color_label.setText(f"current color : {self.drawing_mask.font_color}")
     def color_magenta(self):
         self.drawing_mask.font_color = "magenta"
+        self.font_color_label.setText(f"current color : {self.drawing_mask.font_color}")
     def color_darkMagenta(self):
         self.drawing_mask.font_color = "darkMagenta"
+        self.font_color_label.setText(f"current color : {self.drawing_mask.font_color}")
     def color_yellow(self):
         self.drawing_mask.font_color = "yellow"
+        self.font_color_label.setText(f"current color : {self.drawing_mask.font_color}")
     def color_orange(self):
         self.drawing_mask.font_color = "orange"
+        self.font_color_label.setText(f"current color : {self.drawing_mask.font_color}")
 
     
         
@@ -425,7 +440,7 @@ class PDFWindow(QMainWindow):
         self.stack_drawing.removeWidget(self.drawing_mask)
         self.pno += 1
 
-            
+        self.page_label_no.setText(f"page : {self.pno + 1} of {self.doc.__len__()}")
         self.pixmap = self.get_pix_page(self.doc)
         self.label = self.making_canvas()
         if self.pno < self.pages.__len__():
@@ -443,7 +458,7 @@ class PDFWindow(QMainWindow):
         self.stack_drawing.removeWidget(self.drawing_mask)
         self.pno -= 1
 
-            
+        self.page_label_no.setText(f"page : {self.pno + 1} of {self.doc.__len__()}")
         self.pixmap = self.get_pix_page(self.doc)
         self.label = self.making_canvas()
         if self.pno < self.pages.__len__():
@@ -459,7 +474,8 @@ class PDFWindow(QMainWindow):
         self.save_page()
         self.stack_drawing.removeWidget(self.label)
         self.stack_drawing.removeWidget(self.drawing_mask)
-        self.pno += 1      
+        self.pno += 1   
+        self.page_label_no.setText(f"page : {self.pno + 1} of {self.doc.__len__()}")   
         canvas = QPixmap(self.label.width(), self.label.height())
         canvas.fill(Qt.white)
         self.label = VirtualCursor(canvas)
